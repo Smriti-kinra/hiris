@@ -1,0 +1,21 @@
+{
+  "name": "hiris",
+  "version": "1.0.0",
+  "description": "HIRIS is a full-stack web application designed for organization-wide hiring management. It provides dedicated portals for Hiring Managers, Faculty, and the CHRO to seamlessly submit headcount requests, review candidates, and schedule final interviews.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Smriti-kinra/hiris.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Smriti-kinra/hiris/issues"
+  },
+  "homepage": "https://github.com/Smriti-kinra/hiris#readme"
+}
