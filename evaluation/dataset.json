@@ -1,0 +1,47 @@
+[
+  {
+    "id": "cand_1",
+    "job_description": "Senior Software Engineer. Required: 5+ years experience in React and Node.js. Experience with PostgreSQL and Docker. Strong system design skills.",
+    "resume": "John Doe. Senior Full Stack Developer with 6 years of experience. Expertise in React, Node.js, and Express. Proficient in Postgres and MongoDB. Led the migration of a monolithic app to microservices using Docker and Kubernetes. Designed scalable system architectures for high-traffic platforms.",
+    "ground_truth": {
+      "expected_score_range": [85, 100],
+      "reasoning_keywords": ["strong match", "React", "Node.js", "PostgreSQL", "Docker", "system design", "6 years"]
+    }
+  },
+  {
+    "id": "cand_2",
+    "job_description": "Senior Software Engineer. Required: 5+ years experience in React and Node.js. Experience with PostgreSQL and Docker. Strong system design skills.",
+    "resume": "Jane Smith. Junior Developer. 1 year experience with Python and Django. Familiar with HTML and CSS. Eager to learn.",
+    "ground_truth": {
+      "expected_score_range": [0, 30],
+      "reasoning_keywords": ["lacks experience", "no React", "no Node.js", "Python", "junior"]
+    }
+  },
+  {
+    "id": "cand_3",
+    "job_description": "Data Scientist. Required: Master's degree. 3+ years experience with Python, Pandas, and scikit-learn. Experience building machine learning models for natural language processing.",
+    "resume": "Alice Johnson. Education: MS in Computer Science. Experience: 4 years as a Data Analyst using Python, SQL, and Tableau. Built predictive models using scikit-learn. No direct NLP experience, mostly tabular data.",
+    "ground_truth": {
+      "expected_score_range": [60, 80],
+      "reasoning_keywords": ["Master's degree", "Python", "scikit-learn", "lacks NLP", "tabular data"]
+    }
+  },
+  {
+    "id": "cand_4",
+    "job_description": "Product Manager. Required: 4+ years of product management experience. Agile methodology. Strong communication and roadmap planning.",
+    "resume": "Bob Williams. Product Manager. 5 years experience managing B2B SaaS products. Certified Scrum Master (Agile). Developed multi-year roadmaps and communicated cross-functionally with engineering and marketing teams.",
+    "ground_truth": {
+      "expected_score_range": [90, 100],
+      "reasoning_keywords": ["5 years", "Agile", "Scrum Master", "roadmap", "communication", "excellent fit"]
+    }
+  },
+  {
+    "id": "cand_5",
+    "job_description": "Frontend Developer. Required: React, TypeScript, CSS Modules. Nice to have: Next.js.",
+    "resume": "Charlie Brown. Frontend Engineer. 3 years working with Vue.js and Nuxt.js. Proficient in Tailwind CSS and JavaScript. Some basic exposure to React.",
+    "ground_truth": {
+      "expected_score_range": [30, 55],
+      "reasoning_keywords": ["Vue.js", "missing TypeScript", "basic React", "mismatch"]
+    }
+  }
+]
