@@ -1,0 +1,65 @@
+version: '3.8'
+
+# ─── REQUIRED: set these in your shell or a root-level .env file ────────────
+# JWT_SECRET          — min 32 random characters (openssl rand -hex 32)
+# REGISTRATION_SECRET — a secret token required to call POST /api/auth/register-org
+# POSTGRES_PASSWORD   — database password (change from default for production)
+# FRONTEND_URL        — exact origin of the deployed frontend (for CORS)
+#
+# Example root .env:
+#   JWT_SECRET=<output of: openssl rand -hex 32>
+#   REGISTRATION_SECRET=<output of: openssl rand -hex 16>
+#   POSTGRES_PASSWORD=hiris_password
+#   FRONTEND_URL=https://yourdomain.com
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: hiris-db
+    environment:
+      POSTGRES_USER: hiris_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hiris_password}
+      POSTGRES_DB: hiris_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Mounts 000_schema.sql so postgres auto-initialises on first run
+      - ./backend/migrations/000_schema.sql:/docker-entrypoint-initdb.d/000_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hiris_admin -d hiris_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    container_name: hiris-backend
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgres://hiris_admin:${POSTGRES_PASSWORD:-hiris_password}@postgres:5432/hiris_db
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRY=7d
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:8080}
+      - REGISTRATION_SECRET=${REGISTRATION_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./hiris-unified
+    container_name: hiris-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  pgdata:
