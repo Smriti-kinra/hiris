@@ -104,7 +104,7 @@ export default function AppShell({ portal, pageTitle, children }) {
   }
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" data-portal={portal}>
       {/* ── Mobile Overlay ── */}
       {mobileMenuOpen && (
         <div 

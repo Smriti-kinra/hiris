@@ -88,6 +88,15 @@ body {
   --badge-gray-text: #475569;
 }
 
+/* ─── CHRO Specific Font ────────────────────────────────── */
+.app-shell[data-portal="chro"],
+.app-shell[data-portal="chro"] button,
+.app-shell[data-portal="chro"] input,
+.app-shell[data-portal="chro"] textarea,
+.app-shell[data-portal="chro"] select {
+  font-family: 'Roboto', sans-serif !important;
+}
+
 /* ─── Dark Theme ─────────────────────────────────────────── */
 [data-theme="dark"] {
   --bg-base:       #0B1120;
