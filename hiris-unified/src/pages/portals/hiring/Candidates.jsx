@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import AppShell from '../../../components/AppShell'
 import { apiFetch } from '../../../services/api'
 
 const STAGE_BADGE = {
-  Applied:   'badge-gray',
-  Screening: 'badge-amber',
-  Interview: 'badge-blue',
-  Offer:     'badge-green',
-  Hired:     'badge-green',
-  Rejected:  'badge-red',
+  'Applied':              'badge-gray',
+  'Under Review':         'badge-amber',
+  'Technical Interview':  'badge-blue',
+  'Behavioral Interview': 'badge-purple',
+  'Final Review':         'badge-green',
+  'Offered':              'badge-green',
+  'Rejected':             'badge-red',
 }
 
 export default function HiringCandidates() {
+  const navigate = useNavigate()
   const [candidates, setCandidates] = useState([])
   const [loading, setLoading]       = useState(true)
   const [search, setSearch]         = useState('')
@@ -25,8 +28,9 @@ export default function HiringCandidates() {
   }, [])
 
   const filtered = candidates.filter(c =>
-    !search || c.name?.toLowerCase().includes(search.toLowerCase()) ||
-    c.role?.toLowerCase().includes(search.toLowerCase())
+    !search || 
+    c.name?.toLowerCase().includes(search.toLowerCase()) ||
+    (c.role || '').toLowerCase().includes(search.toLowerCase())
   )
 
   return (
@@ -69,14 +73,14 @@ export default function HiringCandidates() {
             </thead>
             <tbody>
               {filtered.map(c => (
-                <tr key={c.id}>
+                <tr key={c.id} onClick={() => navigate(`/hiring/candidates/${c.id}`)} style={{ cursor: 'pointer' }}>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div className="avatar" style={{ width: 30, height: 30, fontSize: 11 }}>
                         {c.name?.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase()}
                       </div>
                       <div>
-                        <div style={{ fontWeight: 600, fontSize: 13.5 }}>{c.name}</div>
+                        <div style={{ fontWeight: 600, fontSize: 13.5, color: c.stage === 'Offered' || c.stage === 'Final Review' ? '#10B981' : c.stage === 'Rejected' ? '#EF4444' : 'var(--text-primary)' }}>{c.name}</div>
                         <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>{c.email}</div>
                       </div>
                     </div>

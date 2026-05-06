@@ -45,7 +45,7 @@ const app = express()
 // Sentry request handler must be FIRST
 app.use(Sentry.Handlers.requestHandler())
 
-app.use(helmet())
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }))
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'))
 
 app.use(cors({
@@ -81,6 +81,7 @@ app.use('/api',       require('./routes/core'))
 app.use('/api',       require('./routes/assistant'))
 app.use('/api',       require('./routes/chro'))
 app.use('/api',       require('./routes/candidates'))
+app.use('/api',       require('./routes/interviews'))
 app.use('/api/ai',    require('./routes/ai'))
 
 /** @swagger

@@ -7,7 +7,11 @@ set "ROOT=%~dp0"
 set "BACKEND=%ROOT%backend"
 set "FRONTEND=%ROOT%hiris-unified"
 
-:: -- 1. Kill any lingering processes on our ports ---------------------
+:: -- 1. Start the local database -----------------------------------------
+echo - Starting local PostgreSQL instance...
+pg_ctl -D "%ROOT%\pgdata" -l "%ROOT%\pgdata\logfile" -o "-p 5433" start
+
+:: -- 2. Kill any lingering processes on our ports ---------------------
 echo - Clearing ports 3001, 5176...
 for %%P in (3001 5176) do (
     for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":%%P" ^| findstr "LISTENING"') do (
@@ -55,9 +59,12 @@ echo.
 echo   Press Ctrl+C to stop all services.
 echo.
 
-:: Open the landing page
-echo - Opening landing page in browser...
+:: Open the landing page and the three portal pages
+echo - Opening landing page and portals in browser...
 start http://localhost:5176
+start http://localhost:5176/chro
+start http://localhost:5176/hiring
+start http://localhost:5176/faculty
 
 :: Keep the command prompt open to view output and accept Ctrl+C
 :wait

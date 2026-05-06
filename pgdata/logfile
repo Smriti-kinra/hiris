@@ -1,0 +1,8 @@
+2026-05-06 15:44:20.421 IST [34344] FATAL:  lock file "postmaster.pid" already exists
+2026-05-06 15:44:20.421 IST [34344] HINT:  Is another postmaster (PID 9644) running in data directory "C:/Users/Sartajdeep Singh/OneDrive/Desktop/aiprod_final/hiris/pgdata"?
+2026-05-06 17:47:17.001 IST [19676] FATAL:  lock file "postmaster.pid" already exists
+2026-05-06 17:47:17.001 IST [19676] HINT:  Is another postmaster (PID 9644) running in data directory "C:/Users/Sartajdeep Singh/OneDrive/Desktop/aiprod_final/hiris/pgdata"?
+2026-05-06 17:47:51.596 IST [25460] FATAL:  lock file "postmaster.pid" already exists
+2026-05-06 17:47:51.596 IST [25460] HINT:  Is another postmaster (PID 9644) running in data directory "C:/Users/Sartajdeep Singh/OneDrive/Desktop/aiprod_final/hiris/pgdata"?
+2026-05-07 02:19:49.202 IST [5024] FATAL:  lock file "postmaster.pid" already exists
+2026-05-07 02:19:49.202 IST [5024] HINT:  Is another postmaster (PID 9644) running in data directory "C:/Users/Sartajdeep Singh/OneDrive/Desktop/aiprod_final/hiris/pgdata"?

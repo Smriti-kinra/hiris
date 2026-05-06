@@ -1,16 +1,31 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import AppShell from '../../../components/AppShell'
 import { apiFetch } from '../../../services/api'
 
 const STATUS_BADGE = { scheduled: 'badge-blue', completed: 'badge-green', cancelled: 'badge-red', pending: 'badge-amber' }
 
 export default function FacultyInterviews() {
+  const navigate = useNavigate()
   const [interviews, setInterviews] = useState([])
   const [loading, setLoading]       = useState(true)
 
   useEffect(() => {
-    apiFetch('/interviews').then(r => r.json()).then(d => setInterviews(Array.isArray(d) ? d : [])).catch(() => setInterviews([])).finally(() => setLoading(false))
+    apiFetch('/interviews?active=true').then(r => r.json()).then(d => setInterviews(Array.isArray(d) ? d : [])).catch(() => setInterviews([])).finally(() => setLoading(false))
   }, [])
+
+  const handleStartInterview = async (i) => {
+    const isTechnical = i.stage === 'technical_interview' || i.round?.toLowerCase().includes('technical')
+    const type = isTechnical ? 'technical' : 'behavioral'
+    const res = await apiFetch('/interviews/start', {
+      method: 'POST',
+      body: JSON.stringify({ application_id: i.application_id, type })
+    })
+    if (res.ok) {
+      const { id } = await res.json()
+      navigate(`/interview-room/${type}/${id}`)
+    }
+  }
 
   return (
     <AppShell portal="faculty" pageTitle="Interviews">
@@ -32,7 +47,15 @@ export default function FacultyInterviews() {
                   <td style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{i.scheduled_at ? new Date(i.scheduled_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' }) : '—'}</td>
                   <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{i.interviewer_name || '—'}</td>
                   <td><span className={`badge ${STATUS_BADGE[i.status] || 'badge-gray'}`}>{i.status}</span></td>
-                  <td style={{ fontSize: 12, color: 'var(--text-muted)', maxWidth: 200 }}><div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{i.notes || '—'}</div></td>
+                  <td>
+                    {i.status === 'scheduled' ? (
+                      <button onClick={() => handleStartInterview(i)} className="btn btn-primary" style={{ padding: '6px 12px', fontSize: 12 }}>
+                        Start Interview
+                      </button>
+                    ) : (
+                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{i.notes || '—'}</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

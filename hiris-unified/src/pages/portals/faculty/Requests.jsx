@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import AppShell from '../../../components/AppShell'
 import NewRequestModal from '../../../components/NewRequestModal'
 import { apiFetch } from '../../../services/api'
+import { useAuth } from '../../../context/AuthContext'
 
 const STATUS_BADGE = { 'Pending Review': 'badge-amber', 'Sent for Approval': 'badge-blue', 'Approved': 'badge-green', 'Rejected': 'badge-red' }
 
 export default function FacultyRequests() {
+  const navigate = useNavigate()
+  const { user } = useAuth()
   const [requests, setRequests] = useState([])
   const [loading, setLoading]   = useState(true)
   const [modal, setModal]       = useState(false)
@@ -13,16 +17,15 @@ export default function FacultyRequests() {
   const [meta, setMeta]         = useState({ total: 0, limit: 10 })
 
   useEffect(() => {
+    if (!user) return
     setLoading(true)
-    apiFetch(`/hiring-requests?page=${page}&limit=10`)
+    apiFetch(`/hiring-requests?page=${page}&limit=50`)
       .then(r => r.json())
       .then(d => {
-        if (d.data) {
-          setRequests(d.data)
-          setMeta(d.meta)
-        } else {
-          setRequests(Array.isArray(d) ? d : [])
-        }
+        const allData = d.data ? d.data : (Array.isArray(d) ? d : [])
+        const filtered = allData.filter(r => r.requested_by_id === user.id)
+        setRequests(filtered)
+        if (d.meta) setMeta({ ...d.meta, total: filtered.length, limit: 50 })
       })
       .catch(() => setRequests([]))
       .finally(() => setLoading(false))
@@ -54,7 +57,12 @@ export default function FacultyRequests() {
             <thead><tr><th>ID</th><th>Role</th><th>Department</th><th>Type</th><th>Positions</th><th>Deadline</th><th>Status</th></tr></thead>
             <tbody>
               {requests.map(r => (
-                <tr key={r.id}>
+                <tr 
+                  key={r.id} 
+                  onClick={() => navigate(`/faculty/jd-builder?requestId=${r.id}`)} 
+                  style={{ cursor: 'pointer' }}
+                  className="hover-row"
+                >
                   <td><span style={{ fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--text-muted)' }}>{r.id}</span></td>
                   <td style={{ fontWeight: 600 }}>{r.title}<div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{r.requested_by}</div></td>
                   <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{r.department}</td>

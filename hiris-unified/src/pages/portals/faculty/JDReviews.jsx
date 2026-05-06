@@ -1,18 +1,26 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import AppShell from '../../../components/AppShell'
 import { apiFetch } from '../../../services/api'
+import { useAuth } from '../../../context/AuthContext'
 
 const URGENCY_BADGE = { urgent: 'badge-red', high: 'badge-amber', medium: 'badge-blue', low: 'badge-gray' }
 
 export default function FacultyJDReviews() {
-  const [jobs, setJobs]     = useState([])
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    apiFetch('/jobs').then(r => r.json())
-      .then(d => setJobs(Array.isArray(d) ? d.filter(j => j.status === 'pending' || j.description) : []))
-      .catch(() => setJobs([])).finally(() => setLoading(false))
-  }, [])
+    if (!user) return
+    apiFetch('/hiring-requests').then(r => r.json())
+      .then(d => {
+        const list = Array.isArray(d) ? d : (d.data || [])
+        setRequests(list.filter(r => r.status === 'Sent for Approval' && r.requested_by_id === user.id))
+      })
+      .catch(() => setRequests([])).finally(() => setLoading(false))
+  }, [user])
 
   return (
     <AppShell portal="faculty" pageTitle="JD Reviews">
@@ -24,24 +32,24 @@ export default function FacultyJDReviews() {
       </div>
       <div className="card">
         {loading ? <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><div className="spinner" /></div>
-        : jobs.length === 0 ? <div className="empty-state">No job descriptions pending review</div>
+        : requests.length === 0 ? <div className="empty-state">No job descriptions pending review</div>
         : (
           <table className="hiris-table">
-            <thead><tr><th>Role</th><th>Department</th><th>Type</th><th>Urgency</th><th>Manager</th><th>Posted</th><th>Action</th></tr></thead>
+            <thead><tr><th>Role</th><th>Department</th><th>Type</th><th>Positions</th><th>Requester</th><th>Submitted</th><th>Action</th></tr></thead>
             <tbody>
-              {jobs.map(j => (
-                <tr key={j.id}>
-                  <td style={{ fontWeight: 600 }}>{j.title}</td>
-                  <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{j.department}</td>
-                  <td><span className="badge badge-gray">{j.job_type}</span></td>
-                  <td><span className={`badge ${URGENCY_BADGE[j.urgency] || 'badge-gray'}`}>{j.urgency}</span></td>
-                  <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{j.manager || '—'}</td>
+              {requests.map(r => (
+                <tr key={r.id}>
+                  <td style={{ fontWeight: 600 }}>{r.title}</td>
+                  <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{r.department}</td>
+                  <td><span className="badge badge-gray">{r.job_type}</span></td>
+                  <td style={{ fontSize: 13, color: 'var(--brand)', fontWeight: 700 }}>{r.positions}</td>
+                  <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{r.requested_by || '—'}</td>
                   <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                    {j.posted_at ? new Date(j.posted_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—'}
+                    {r.submitted_at ? new Date(r.submitted_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—'}
                   </td>
                   <td>
                     <div style={{ display: 'flex', gap: 6 }}>
-                      <button className="btn btn-outline" style={{ padding: '5px 12px', fontSize: 12 }}>Review</button>
+                      <button onClick={() => navigate(`/faculty/jd-builder?requestId=${r.id}`)} className="btn btn-outline" style={{ padding: '5px 12px', fontSize: 12 }}>Review</button>
                     </div>
                   </td>
                 </tr>

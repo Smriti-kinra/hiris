@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import AppShell from '../../../components/AppShell'
 import { apiFetch } from '../../../services/api'
 import NewRequestModal from '../../../components/NewRequestModal'
@@ -12,6 +13,7 @@ const STATUS_BADGE = {
 }
 
 export default function HiringRequests() {
+  const navigate = useNavigate()
   const toast = useToast()
   const [requests, setRequests]     = useState([])
   const [loading, setLoading]       = useState(true)
@@ -96,7 +98,7 @@ export default function HiringRequests() {
             </thead>
             <tbody>
               {filtered.map(r => (
-                <tr key={r.id}>
+                <tr key={r.id} onClick={() => navigate(`/hiring/job-builder?requestId=${r.id}`)} style={{ cursor: 'pointer' }} className="hover:bg-[#F8FAFC]">
                   <td><span style={{ fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--text-muted)' }}>{r.id}</span></td>
                   <td style={{ fontWeight: 600, maxWidth: 200 }}>
                     <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.title}</div>
@@ -111,7 +113,27 @@ export default function HiringRequests() {
                     {r.deadline ? new Date(r.deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' }) : '—'}
                   </td>
                   <td>
-                    <span className={`badge ${STATUS_BADGE[r.status] || 'badge-gray'}`}>{r.status}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className={`badge ${STATUS_BADGE[r.status] || 'badge-gray'}`}>{r.status}</span>
+                      {r.status === 'Approved' && (
+                        <button 
+                          className="btn btn-primary" 
+                          style={{ padding: '4px 10px', fontSize: 11, minHeight: 'unset' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            apiFetch(`/hiring-requests/${r.id}/status`, {
+                              method: 'PATCH',
+                              body: JSON.stringify({ action: 'post' })
+                            }).then(() => {
+                              toast.success('Job posting is now live!');
+                              setRequests(prev => prev.map(req => req.id === r.id ? { ...req, status: 'Posted' } : req));
+                            }).catch(err => console.error(err));
+                          }}
+                        >
+                          Post
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

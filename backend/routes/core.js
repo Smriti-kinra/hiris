@@ -45,7 +45,7 @@ router.get('/hiring-requests', requireAuth, async (req, res) => {
       COALESCE(j.job_type,'Full-time') AS job_type, hr.headcount AS positions, hr.deadline,
       CASE hr.status WHEN 'pending' THEN 'Pending Review' WHEN 'under_review' THEN 'Sent for Approval'
         WHEN 'approved' THEN 'Approved' WHEN 'rejected' THEN 'Rejected' ELSE hr.status END AS status,
-      u.name AS requested_by, hr.submitted_at
+      u.name AS requested_by, hr.requested_by AS requested_by_id, hr.submitted_at
     FROM headcount_requests hr
     LEFT JOIN jobs  j ON j.id=hr.job_id
     LEFT JOIN users u ON u.id=hr.requested_by
@@ -62,6 +62,26 @@ router.get('/hiring-requests', requireAuth, async (req, res) => {
   }
 
   res.json(rows)
+})
+
+// ─── Hiring Requests (single) ─────────────────────────────────────────────────
+router.get('/hiring-requests/:id', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const { rows } = await query(`
+    SELECT hr.id::text AS id, j.title, j.department,
+      COALESCE(j.job_type,'Full-time') AS job_type, hr.headcount AS positions, 
+      TO_CHAR(hr.deadline, 'Mon DD, YYYY') AS deadline, 
+      CASE hr.status WHEN 'pending' THEN 'Pending Review' WHEN 'under_review' THEN 'Sent for Approval'
+        WHEN 'approved' THEN 'Approved' WHEN 'rejected' THEN 'Rejected' ELSE hr.status END AS status,
+      u.name AS requested_by, hr.requested_by AS requested_by_id,
+      hr.notes AS description, j.location, hr.jd_json
+    FROM headcount_requests hr
+    LEFT JOIN jobs j ON j.id=hr.job_id
+    LEFT JOIN users u ON u.id=hr.requested_by
+    WHERE hr.id=$1
+  `, [id]);
+  if (!rows.length) return res.status(404).json({ error: 'Not found' });
+  res.json(rows[0]);
 })
 
 // ─── Hiring Requests (create) ─────────────────────────────────────────────────
@@ -131,19 +151,23 @@ router.get('/interviews', requireAuth, async (req, res) => {
   const limit = parseInt(req.query.limit) || 10
   const offset = page ? (page - 1) * limit : 0
 
+  const activeFilter = req.query.active === 'true' ? "AND a.stage NOT IN ('offered', 'hired', 'rejected', 'archived')" : ''
   const queryStr = `
-    SELECT i.id::text AS id, i.scheduled_at, i.round, i.status, i.notes, i.calendly_link,
+    SELECT i.id::text AS id, i.application_id::text AS application_id, i.scheduled_at, i.round, i.status, i.notes, i.calendly_link,
       c.name AS candidate_name, c.email AS candidate_email,
-      j.title AS job_title, j.department, u.name AS interviewer_name
+      j.title AS job_title, j.department, u.name AS interviewer_name, a.stage
     FROM interviews i
     JOIN applications a ON a.id=i.application_id
     JOIN candidates  c ON c.id=a.candidate_id
     JOIN jobs        j ON j.id=a.job_id
     LEFT JOIN users  u ON u.id=i.interviewer_id
+    JOIN users req_user ON req_user.id = $1
+    JOIN roles r ON r.id = req_user.role_id
+    WHERE a.stage = ANY(r.visible_stages) ${activeFilter}
     ORDER BY i.scheduled_at ASC
-    ${page ? 'LIMIT $1 OFFSET $2' : ''}`
+    ${page ? 'LIMIT $2 OFFSET $3' : ''}`
 
-  const params = page ? [limit, offset] : []
+  const params = page ? [req.currentUser.userId, limit, offset] : [req.currentUser.userId]
   const { rows } = await query(queryStr, params)
 
   if (page) {
@@ -159,8 +183,9 @@ router.get('/interviews', requireAuth, async (req, res) => {
 router.get('/analytics', requireAuth, async (req, res) => {
   const [funnel, sources, avgScore, depts] = await Promise.all([
     query(`SELECT stage, COUNT(*)::int AS count FROM applications GROUP BY stage
-           ORDER BY CASE stage WHEN 'applied' THEN 1 WHEN 'screening' THEN 2
-             WHEN 'interview' THEN 3 WHEN 'offered' THEN 4 WHEN 'accepted' THEN 5 WHEN 'rejected' THEN 6 END`),
+           ORDER BY CASE stage WHEN 'applied' THEN 1 WHEN 'under_review' THEN 2
+             WHEN 'technical_interview' THEN 3 WHEN 'behavioral_interview' THEN 4
+             WHEN 'final_review' THEN 5 WHEN 'offered' THEN 6 WHEN 'rejected' THEN 7 END`),
     query(`SELECT COALESCE(source,'Direct') AS source, COUNT(*)::int AS count
            FROM candidates GROUP BY source ORDER BY count DESC`),
     query(`SELECT ROUND(AVG(ai_score),1) AS avg FROM candidates WHERE ai_score IS NOT NULL`),
@@ -177,23 +202,30 @@ router.get('/analytics', requireAuth, async (req, res) => {
 // ─── Hiring Request Approve / Reject ─────────────────────────────────────────
 router.patch('/hiring-requests/:id/status', requireAuth, async (req, res) => {
   const { id } = req.params
-  const { action, notes } = req.body // action: 'approve' | 'reject'
+  const { action, notes, jd_json } = req.body
 
-  if (!['approve', 'reject'].includes(action)) {
-    return res.status(400).json({ error: 'action must be "approve" or "reject"' })
+  if (!['approve', 'reject', 'submit_jd', 'post'].includes(action)) {
+    return res.status(400).json({ error: 'action must be "approve", "reject", "submit_jd", or "post"' })
   }
 
-  const newStatus = action === 'approve' ? 'approved' : 'rejected'
+  let newStatus = 'pending'
+  if (action === 'approve') newStatus = 'approved'
+  if (action === 'reject') newStatus = 'rejected'
+  if (action === 'submit_jd') newStatus = 'under_review'
+  if (action === 'post') newStatus = 'active' // wait, active goes on the job, but let's say 'posted' for request
+  
+  if (action === 'post') newStatus = 'posted'
 
   const { rows } = await query(
     `UPDATE headcount_requests
-     SET status=$1, updated_at=NOW()
+     SET status=$1 ${action === 'submit_jd' ? ", jd_json=$3" : ""}
      WHERE id=$2
      RETURNING id::text,
        CASE status WHEN 'approved' THEN 'Approved' WHEN 'rejected' THEN 'Rejected'
          WHEN 'pending' THEN 'Pending Review' WHEN 'under_review' THEN 'Sent for Approval'
+         WHEN 'posted' THEN 'Posted'
          ELSE status END AS status`,
-    [newStatus, id]
+    action === 'submit_jd' ? [newStatus, id, jd_json] : [newStatus, id]
   )
 
   if (!rows.length) return res.status(404).json({ error: 'Request not found' })

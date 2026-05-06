@@ -1,0 +1,110 @@
+HIRIS (Hiring Intelligence & Recruitment Information System) - Complete System Overview
+==========================================================================================
+
+1. ARCHITECTURE
+--------------------------------------------------------------------------------
+HIRIS is a full-stack enterprise application built with:
+- Frontend: React (Vite) Single Page Application (SPA) on port 5176.
+- Backend: Node.js with Express.js REST API on port 3001.
+- Database: PostgreSQL (port 5433) for relational data persistence.
+- File Storage: Local filesystem (backend/uploads) for PDFs and audio recordings.
+- AI Integration: Google Gemini API (gemini-2.0-flash) for question generation and evaluation.
+- Transcription: Integration-ready architecture for Whisper/Groq (currently uses live-text mapping).
+- Security: JWT in httpOnly cookies, Helmet, rate limiting, RBAC.
+
+2. USER PORTALS & ROLES (RBAC)
+--------------------------------------------------------------------------------
+The system uses a Role-Based Access Control (RBAC) system defined in the `roles` table.
+Current Users and Roles:
+- Smriti Kinra (CHRO, Role ID 1): Behavioral interviews, institutional values, final decisions.
+- Sartajdeep Singh (Hiring Manager, Role ID 2): JD building, initial screening, pipeline management.
+- Gracy Tanna (Faculty, Role ID 3): Technical interviews, JD reviews, headcount requests.
+
+3. DYNAMIC HIRING PIPELINE & VISIBILITY
+--------------------------------------------------------------------------------
+The pipeline follows a 7-stage gate-based workflow:
+1. Applied → 2. Under Review → 3. Technical Interview → 4. Behavioral Interview → 5. Final Review → 6. Offered → 7. Rejected
+
+Stage-Gate Visibility Logic (Database-Driven):
+Visibility is controlled via `roles.visible_stages` to focus users on relevant candidates:
+- Hiring Manager: 'applied', 'under_review'.
+- Faculty: 'technical_interview'.
+- CHRO: 'behavioral_interview', 'final_review', 'offered', 'rejected'.
+
+4. CORE WORKFLOWS
+--------------------------------------------------------------------------------
+A. Job Posting & Approval:
+- Faculty submit requests → Manager builds JD → Faculty reviews/approves → Job goes live.
+
+B. Candidate Pipeline:
+- Candidates are screened by Managers and moved to Technical Interview.
+- Faculty conducts Technical Interview → Moves to Behavioral or Rejects.
+- CHRO conducts Behavioral Interview → Moves to Final Review or Rejects.
+
+C. Institutional Policy (CHRO):
+- CHRO uploads "Institutional Values" PDFs.
+- Gemini uses these to ensure candidate alignment during interviews and evaluation.
+
+5. ADVANCED INTERVIEW ROOMS
+--------------------------------------------------------------------------------
+Both rooms feature Automatic Audio Recording (MediaRecorder) triggered on session start.
+
+A. Technical Interview Room:
+- Focus: Hard skills and problem solving.
+- Features: Live timer, live manual transcript, 10-trait technical evaluation.
+- Outcome: Manual recommendation + Proceed/Reject buttons on summary.
+
+B. Behavioral Interview Room:
+- Focus: Cultural fit and institutional alignment.
+- AI Question Panel: Dynamically generates 10 candidate-specific questions using Gemini.
+- Logic: Reads Resume, CV, and Institutional Values PDFs to produce probing, non-generic questions.
+- Outcome: AI-powered trait evaluation + manual recommendation + Proceed/Reject buttons.
+
+6. AI KNOWLEDGE EXTRACTION & EVALUATION
+--------------------------------------------------------------------------------
+Service: `backend/services/gemini.js`
+Extraction: `pdf-parse` extracts text from uploaded PDFs.
+
+- Question Generation: Generates 10 behavioral questions before the interview starts.
+- Post-Interview Evaluation: Gemini analyzes the transcript against 13 behavioral traits.
+- Data Storage: AI results (traits, summary, strengths, concerns) are stored in `interview_sessions` and `interview_evaluations`.
+
+7. CANDIDATE KNOWLEDGE MODEL (360° VIEW)
+--------------------------------------------------------------------------------
+Every candidate profile dynamically renders:
+- Application Data: Role, Dept, Applied Date, Status.
+- Documents: Clickable Resume and CV download links (sourced from DB).
+- Chatbot History: Full pre-screening transcript.
+- Interview History: Comparison charts of Human vs AI ratings for every completed round.
+- Recordings: Inline audio playback for every interview session.
+- AI Analysis: Institutional alignment summaries, strengths, and concerns.
+
+8. PROCEED / REJECT WORKFLOW
+--------------------------------------------------------------------------------
+After any interview, the user can:
+- "Proceed to Next Stage": Automatically updates the application `stage` in the database.
+  - Technical → Behavioral Interview
+  - Behavioral → Final Review
+- "Reject Application": Sets status to `rejected` and removes from active pipeline views.
+
+9. DATABASE SCHEMA & ENTITIES
+--------------------------------------------------------------------------------
+- `candidates`: Added `resume_path`, `cv_path`.
+- `applications`: Controls the stage-gate logic.
+- `interview_sessions`: Stores `recording_path`, `audio_transcript`, `ai_analysis` (JSONB).
+- `candidate_questions`: Caches Gemini-generated questions for candidates.
+- `policy_documents`: Tracks institutional value versions.
+
+10. KEY API ENDPOINTS
+--------------------------------------------------------------------------------
+- POST `/api/interviews/start`: Initializes session and recording metadata.
+- POST `/api/interviews/:id/audio`: Handles multipart audio upload from frontend.
+- POST `/api/interviews/:id/proceed`: Moves candidate forward in the pipeline.
+- POST `/api/ai/generate-behavioral-questions`: Triggered by behavioral room start.
+- POST `/api/ai/evaluate-behavioral-interview`: Gemini-based transcript analysis.
+
+11. FILE STORAGE (backend/uploads)
+--------------------------------------------------------------------------------
+- `recordings/`: Interview audio files (WebM format).
+- `seeded_resume.pdf` / `seeded_cv.pdf`: Default docs for initial candidate set.
+- Root: Policy PDFs and other institutional documents.
