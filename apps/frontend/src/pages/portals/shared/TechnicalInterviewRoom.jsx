@@ -237,40 +237,8 @@ export default function TechnicalInterviewRoom() {
             </div>
           </div>
 
-          {/* Transcript Area — hidden for faculty (no live translation needed) */}
-          {!isFaculty && (
-            <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              <div className="card-pad" style={{ borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>Live Transcript</div>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{transcript.length} entries</span>
-              </div>
-              <div className="card-pad" style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-hover)', display: 'flex', flexDirection: 'column', gap: 12, minHeight: 300 }}>
-                {transcript.length === 0 ? (
-                  <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-                    Transcript will appear here once the conversation begins...
-                  </div>
-                ) : (
-                  transcript.map((m, idx) => (
-                    <div key={idx} style={{ alignSelf: m.speaker === 'Candidate' ? 'flex-start' : 'flex-end', maxWidth: '80%' }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 3, textAlign: m.speaker === 'Candidate' ? 'left' : 'right' }}>{m.speaker}</div>
-                      <div style={{ padding: '10px 14px', borderRadius: 12, background: m.speaker === 'Candidate' ? '#fff' : 'var(--brand)', color: m.speaker === 'Candidate' ? 'var(--text-primary)' : '#fff', fontSize: 13, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-                        {m.text}
-                      </div>
-                    </div>
-                  ))
-                )}
-                <div ref={transcriptEndRef} />
-              </div>
-              <div className="card-pad" style={{ borderTop: '1px solid var(--border)', display: 'flex', gap: 10 }}>
-                <input className="hiris-input" placeholder="Candidate says..." onKeyDown={e => { if (e.key === 'Enter' && e.target.value) { handleAddTranscript('Candidate', e.target.value); e.target.value = '' } }} />
-                <input className="hiris-input" placeholder="Your response..." style={{ borderColor: 'var(--brand)' }} onKeyDown={e => { if (e.key === 'Enter' && e.target.value) { handleAddTranscript('Interviewer', e.target.value); e.target.value = '' } }} />
-              </div>
-            </div>
-          )}
-
-          {/* Faculty-only: Interview Notes Panel (replaces transcript inputs) */}
-          {isFaculty && (
-            <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          {/* Interview Notes Panel */}
+          <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
               <div className="card-pad" style={{ borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>Interview Notes</div>
@@ -312,7 +280,6 @@ export default function TechnicalInterviewRoom() {
                 </button>
               </div>
             </div>
-          )}
         </div>
 
         {/* Right Column: Evaluation & Panel */}

@@ -1,0 +1,9 @@
+ALTER TABLE candidates ADD COLUMN IF NOT EXISTS resume_path TEXT;
+ALTER TABLE candidates ADD COLUMN IF NOT EXISTS cv_path TEXT;
+ALTER TABLE candidates ADD COLUMN IF NOT EXISTS resume_file_id TEXT;
+ALTER TABLE candidates ADD COLUMN IF NOT EXISTS cv_file_id TEXT;
+
+ALTER TABLE applications ADD COLUMN IF NOT EXISTS resume_file_id TEXT;
+ALTER TABLE applications ADD COLUMN IF NOT EXISTS cv_file_id TEXT;
+ALTER TABLE applications ADD COLUMN IF NOT EXISTS ai_chat_answers JSONB NOT NULL DEFAULT '[]';
+ALTER TABLE applications ADD COLUMN IF NOT EXISTS application_answers JSONB NOT NULL DEFAULT '{}';

@@ -15,7 +15,6 @@ export default function FacultyDashboard() {
   const canRequestJobs = !!(user?.permissions?.can_request_jobs || user?.permissions?.is_admin)
   const [requests, setRequests]       = useState([])
   const [totalRequests, setTotalRequests] = useState(0)
-  const [openings, setOpenings]       = useState([])
   const [facultyStats, setFacultyStats] = useState(null)
   const [loading, setLoading]         = useState(true)
   const [modal, setModal]             = useState(false)
@@ -23,13 +22,11 @@ export default function FacultyDashboard() {
   useEffect(() => {
     Promise.all([
       apiFetch('/hiring-requests').then(r => r.json()).catch(() => []),
-      apiFetch('/active-openings').then(r => r.json()).catch(() => []),
       apiFetch('/faculty/stats').then(r => r.json()).catch(() => null),
-    ]).then(([req, op, fs]) => {
+    ]).then(([req, fs]) => {
       const allReqs = Array.isArray(req) ? req : []
       setTotalRequests(allReqs.length)
       setRequests(allReqs.slice(0, 4))
-      setOpenings(Array.isArray(op) ? op.slice(0, 4) : [])
       setFacultyStats(fs)
     }).finally(() => setLoading(false))
   }, [])
@@ -80,7 +77,7 @@ export default function FacultyDashboard() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 20 }}>
             {/* My Requests */}
             <div className="card">
               <div className="card-pad" style={{ borderBottom: '1px solid var(--border)' }}>
@@ -104,36 +101,6 @@ export default function FacultyDashboard() {
                         <td>
                           <span className={`badge ${STATUS_BADGE[r.status] || 'badge-gray'}`}>{r.status}</span>
                         </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-
-            {/* Active openings */}
-            <div className="card">
-              <div className="card-pad" style={{ borderBottom: '1px solid var(--border)' }}>
-                <div className="card-title">Open Positions</div>
-                <div className="card-sub">Currently recruiting</div>
-              </div>
-              {openings.length === 0 ? (
-                <div className="empty-state">No open positions</div>
-              ) : (
-                <table className="hiris-table">
-                  <thead><tr><th>Role</th><th>Candidates</th><th>Deadline</th></tr></thead>
-                  <tbody>
-                    {openings.map(o => (
-                      <tr key={o.id}>
-                        <td style={{ fontWeight: 600, fontSize: 13, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {o.title}
-                        </td>
-                        <td>
-                          <span style={{ background: 'var(--brand-light)', color: 'var(--brand)', padding: '2px 8px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
-                            {o.candidates}
-                          </span>
-                        </td>
-                        <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{o.deadline}</td>
                       </tr>
                     ))}
                   </tbody>

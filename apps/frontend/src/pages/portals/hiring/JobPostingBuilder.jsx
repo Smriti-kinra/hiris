@@ -10,23 +10,21 @@ export default function JobPostingBuilder() {
   const [requestData, setRequestData] = useState(null)
   
   const [title, setTitle] = useState('')
-  const [department, setDepartment] = useState('CS-01')
-  const [departments, setDepartments] = useState([
-    { id: 'CS-01', name: 'Computer Science (CS-01)' },
-    { id: 'DS-02', name: 'Data Science (DS-02)' },
-    { id: 'LA-03', name: 'Liberal Arts (LA-03)' }
-  ])
-  const [skills, setSkills] = useState(['Python', 'NLP', 'PyTorch'])
+  const [department, setDepartment] = useState('')
+  const [departments, setDepartments] = useState([])
+  const [deadline, setDeadline] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [skills, setSkills] = useState([])
   const [stages, setStages] = useState([
-    { id: 1, name: 'Screening', checked: true },
-    { id: 2, name: 'Tech Interview 1', checked: true },
-    { id: 3, name: 'Tech Interview 2', checked: false },
-    { id: 4, name: 'HR Round 1', checked: true },
-    { id: 5, name: 'HR Round 2', checked: false },
-    { id: 6, name: 'General Interaction', checked: false }
+    { id: 1, name: 'Application Screening', checked: true },
+    { id: 2, name: 'Technical Interview', checked: true },
+    { id: 3, name: 'Behavioral Interview', checked: true },
+    { id: 4, name: 'Final Review', checked: true },
   ])
   const [location, setLocation] = useState('on-campus')
-  const [questions, setQuestions] = useState([]) // no implicit questions
+  const [jobRequirements, setJobRequirements] = useState('')
+  const [preferredQualifications, setPreferredQualifications] = useState('')
+  const [questions, setQuestions] = useState([])
   const [isAddingQuestion, setIsAddingQuestion] = useState(false)
   const [newQuestion, setNewQuestion] = useState('')
   const [draggedIdx, setDraggedIdx] = useState(null)
@@ -58,25 +56,50 @@ export default function JobPostingBuilder() {
     if (requestId) {
       apiFetch(`/hiring-requests/${requestId}`)
         .then(r => r.json()).then(data => {
+          console.log('[JD BUILDER] Loaded request data:', data)
           setRequestData(data)
           setTitle(data.title || '')
-          
+          if (data.deadline) setDeadline(data.deadline)
+          if (data.start_date) setStartDate(data.start_date)
+
+          // Prefill department from request
+          if (data.department) {
+            setDepartment(data.department)
+            // Ensure department exists in dropdown list
+            setDepartments(prev => {
+              const exists = prev.find(d => d.id === data.department || d.name === data.department)
+              if (!exists) {
+                return [...prev, { id: data.department, name: data.department }]
+              }
+              return prev
+            })
+          }
+
           if (data.jd_json) {
             const jd = data.jd_json
+            console.log('[JD BUILDER] Restoring saved JD JSON:', jd)
             if (jd.department) setDepartment(jd.department)
             if (jd.location) setLocation(jd.location)
-            if (jd.skills) setSkills(jd.skills)
+            if (jd.deadline) setDeadline(jd.deadline)
+            if (jd.startDate) setStartDate(jd.startDate)
+            if (jd.skills?.length) setSkills(jd.skills)
             if (jd.questions) setQuestions(jd.questions)
             if (jd.stages) setStages(jd.stages)
             if (jd.title) setTitle(jd.title)
-            
+            if (jd.jobRequirements) setJobRequirements(jd.jobRequirements)
+            if (jd.preferredQualifications) setPreferredQualifications(jd.preferredQualifications)
+
             if (summaryRef.current && jd.summary) summaryRef.current.innerHTML = jd.summary
             if (respRef.current && jd.responsibilities) respRef.current.innerHTML = jd.responsibilities
             if (jd.requirements) setRequirements(jd.requirements)
           } else {
             if (data.location) setLocation(data.location)
+            // Prefill skills from request notes/description if available
+            if (data.description) {
+              console.log('[JD BUILDER] No saved JD; prefilling from request description')
+            }
           }
-        }).catch(console.error)
+        }).catch(err => console.error('[JD BUILDER] Failed to load request:', err))
     }
   }, [requestId])
 
@@ -102,11 +125,15 @@ export default function JobPostingBuilder() {
         title,
         department,
         location,
+        deadline,
+        startDate,
         skills,
         questions,
         stages,
         summary: summaryRef.current?.innerHTML || '',
         responsibilities: respRef.current?.innerHTML || '',
+        jobRequirements,
+        preferredQualifications,
         requirements
       }
       const res = await apiFetch(`/hiring-requests/${requestId}/status`, {
@@ -260,6 +287,14 @@ export default function JobPostingBuilder() {
                   {!readOnly && <option value="add_new">+ Add New Department</option>}
                 </select>
               </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px' }}>Target Start Date</label>
+                <input disabled={readOnly} className="hiris-input" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px' }}>Application Deadline</label>
+                <input disabled={readOnly} className="hiris-input" type="date" value={deadline} onChange={e => setDeadline(e.target.value)} />
+              </div>
             </div>
 
             <div>
@@ -282,7 +317,7 @@ export default function JobPostingBuilder() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px' }}>Summary</label>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px' }}>Job Description</label>
               {requestData?.description && (
                 <div style={{ padding: '12px', background: 'var(--brand-light)', border: '1px solid var(--brand)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 500, marginBottom: '12px' }}>
                   💡 Professor's notes: "{requestData.description}"
@@ -307,7 +342,7 @@ export default function JobPostingBuilder() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px' }}>Responsibilities</label>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px' }}>Key Responsibilities</label>
               {!readOnly && (
                 <div style={{ display: 'flex', gap: '4px', marginBottom: '8px', padding: '6px', background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: '8px', width: 'fit-content' }}>
                   <button type="button" title="Bold" onMouseDown={e => { e.preventDefault(); respRef.current?.focus(); document.execCommand('bold') }} className="btn-ghost" style={{ padding: '4px 8px', minWidth: 'unset', fontWeight: 700 }}>B</button>
@@ -326,6 +361,35 @@ export default function JobPostingBuilder() {
               />
             </div>
 
+            {/* Job Requirements */}
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px' }}>Job Requirements</label>
+              <textarea
+                disabled={readOnly}
+                className="hiris-input"
+                rows={4}
+                value={jobRequirements}
+                onChange={e => setJobRequirements(e.target.value)}
+                placeholder="Enter minimum qualifications, experience, and required credentials…"
+                style={{ resize: 'vertical', background: readOnly ? 'var(--bg-hover)' : 'var(--bg-input)' }}
+              />
+            </div>
+
+            {/* Preferred Qualifications */}
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px' }}>Preferred Qualifications</label>
+              <textarea
+                disabled={readOnly}
+                className="hiris-input"
+                rows={3}
+                value={preferredQualifications}
+                onChange={e => setPreferredQualifications(e.target.value)}
+                placeholder="Preferred or bonus qualifications that would strengthen the application…"
+                style={{ resize: 'vertical', background: readOnly ? 'var(--bg-hover)' : 'var(--bg-input)' }}
+              />
+            </div>
+
+            {/* Required Skills */}
             <div>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px' }}>Required Skills</label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>

@@ -56,6 +56,7 @@ export default function CandidateProfile() {
   const [error, setError] = useState(null)
   const [noteText, setNoteText] = useState('')
   const [savingNote, setSavingNote] = useState(false)
+  const [noteSaveStatus, setNoteSaveStatus] = useState(null) // 'ok' | 'error' | null
   const [movingStage, setMovingStage] = useState(false)
   const [startingInterview, setStartingInterview] = useState(false)
   const [interviews, setInterviews] = useState([])
@@ -79,8 +80,26 @@ export default function CandidateProfile() {
 
   const handleSaveNote = async () => {
     setSavingNote(true)
-    await apiFetch(`/candidates/${id}/notes`, { method: 'PATCH', body: JSON.stringify({ notes: noteText }) }).catch(() => {})
-    setSavingNote(false)
+    setNoteSaveStatus(null)
+    try {
+      const res = await apiFetch(`/candidates/${id}/notes`, {
+        method: 'PATCH',
+        body: JSON.stringify({ notes: noteText })
+      })
+      if (res.ok) {
+        setNoteSaveStatus('ok')
+        setTimeout(() => setNoteSaveStatus(null), 3000)
+      } else {
+        const d = await res.json().catch(() => ({}))
+        console.error('[NOTES] Save failed:', d?.error)
+        setNoteSaveStatus('error')
+      }
+    } catch (err) {
+      console.error('[NOTES] Network error:', err.message)
+      setNoteSaveStatus('error')
+    } finally {
+      setSavingNote(false)
+    }
   }
 
   const handleMoveStage = async (newStageRaw) => {
@@ -534,16 +553,25 @@ export default function CandidateProfile() {
             )
           })}
 
-          {/* Notes */}
           <SectionCard icon="🗒️" title="Reviewer Notes">
             <textarea
               className="hiris-input"
               rows={4}
               style={{ resize: 'vertical', marginBottom: 10 }}
               value={noteText}
-              onChange={e => setNoteText(e.target.value)}
+              onChange={e => { setNoteText(e.target.value); setNoteSaveStatus(null) }}
               placeholder={`Add your private notes about ${candidate.name}...`}
             />
+            {noteSaveStatus === 'ok' && (
+              <div style={{ fontSize: 12, color: 'var(--accent-green)', fontWeight: 600, marginBottom: 8 }}>
+                ✓ Notes saved successfully.
+              </div>
+            )}
+            {noteSaveStatus === 'error' && (
+              <div style={{ fontSize: 12, color: 'var(--accent-red)', fontWeight: 600, marginBottom: 8 }}>
+                ✕ Failed to save notes. Please try again.
+              </div>
+            )}
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <button disabled={savingNote} onClick={handleSaveNote} className="btn btn-primary" style={{ padding: '7px 18px', fontSize: 13 }}>
                 {savingNote ? 'Saving…' : 'Save Notes'}

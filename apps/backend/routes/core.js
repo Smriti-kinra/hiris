@@ -99,8 +99,8 @@ router.get('/hiring-requests/:id', requireAuth, requirePermission('can_view_requ
   const { rows } = await query(`
     SELECT hr.id::text AS id, j.title, j.department,
       COALESCE(j.job_type,'Full-time') AS job_type, hr.headcount AS positions, 
-      TO_CHAR(hr.deadline, 'Mon DD, YYYY') AS deadline,
-      TO_CHAR(hr.start_date, 'Mon DD, YYYY') AS start_date,
+      TO_CHAR(hr.deadline, 'YYYY-MM-DD') AS deadline,
+      TO_CHAR(hr.start_date, 'YYYY-MM-DD') AS start_date,
       CASE hr.status WHEN 'pending' THEN 'Pending Review' WHEN 'under_review' THEN 'Sent for Approval'
         WHEN 'approved' THEN 'Approved' WHEN 'rejected' THEN 'Rejected' WHEN 'posted' THEN 'Posted' ELSE hr.status END AS status,
       requester.name AS requested_by, hr.requested_by AS requested_by_id,
@@ -292,8 +292,8 @@ router.patch('/hiring-requests/:id/status', requireAuth, async (req, res) => {
 
   if (!rows.length) return res.status(404).json({ error: 'Request not found' })
 
-  // If approving, activate the associated job posting
-  if (action === 'approve') {
+  // If posting, activate the associated job posting
+  if (action === 'post') {
     await query(
       `UPDATE jobs SET status='active' WHERE id=(
          SELECT job_id FROM headcount_requests WHERE id=$1 AND org_id=$2

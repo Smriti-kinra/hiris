@@ -73,20 +73,12 @@ export default function BehavioralInterviewRoom() {
   const fetchAIQuestions = async (candidateId) => {
     setLoadingQuestions(true)
     try {
-      // First try cached questions
-      const cached = await apiFetch(`/ai/candidates/${candidateId}/questions`).then(r => r.json())
-      if (cached?.questions?.length > 0) {
-        setAiQuestions(cached.questions)
-        setLoadingQuestions(false)
-        return
+      const cached = await apiFetch(`/candidates/${candidateId}/questions`).then(r => r.json())
+      if (cached && cached.length > 0) {
+        setAiQuestions(cached.map(r => r.question))
+      } else {
+        setAiQuestions([])
       }
-      // Generate fresh via Gemini
-      const res = await apiFetch('/ai/generate-behavioral-questions', {
-        method: 'POST',
-        body: JSON.stringify({ candidate_id: candidateId })
-      })
-      const data = await res.json()
-      if (data.questions) setAiQuestions(data.questions)
     } catch (err) {
       console.error('Failed to fetch AI questions:', err)
     }

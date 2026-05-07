@@ -91,12 +91,12 @@ export default function CHROInterviews() {
   )
 
   return (
-    <AppShell portal="chro" pageTitle="Final Interview Pipeline">
+    <AppShell portal="chro" pageTitle="Schedule">
       <div className="page-header">
         <div>
-          <div className="page-title">Final Interview Pipeline</div>
+          <div className="page-title">Schedule</div>
           <div className="page-subtitle">
-            {candidates.length} candidate{candidates.length !== 1 ? 's' : ''} ready for CHRO final interview
+            {candidates.length} candidate{candidates.length !== 1 ? 's' : ''} ready for behavioral or final interviews
           </div>
         </div>
         <button className="btn btn-outline" onClick={() => { loadPipeline(); loadScheduled(); toast.info('Refreshed') }} style={{ fontSize: 13 }}>
@@ -111,7 +111,7 @@ export default function CHROInterviews() {
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 0 }}>
         {[
-          { key: 'pipeline', label: `Final Interview Pipeline (${candidates.length})` },
+          { key: 'pipeline', label: `Needs Scheduling (${candidates.length})` },
           { key: 'schedule', label: `Scheduled (${scheduledInterviews.length})` },
         ].map(tab => (
           <button

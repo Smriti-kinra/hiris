@@ -24,9 +24,8 @@ export default function FacultyRequests() {
       .then(r => r.json())
       .then(d => {
         const allData = d.data ? d.data : (Array.isArray(d) ? d : [])
-        const filtered = allData.filter(r => r.requested_by_id === user.id)
-        setRequests(filtered)
-        if (d.meta) setMeta({ ...d.meta, total: filtered.length, limit: 50 })
+        setRequests(allData)
+        if (d.meta) setMeta({ ...d.meta, total: allData.length, limit: 50 })
       })
       .catch(() => setRequests([]))
       .finally(() => setLoading(false))
@@ -60,12 +59,7 @@ export default function FacultyRequests() {
             <thead><tr><th>ID</th><th>Role</th><th>Department</th><th>Type</th><th>Positions</th><th>Deadline</th><th>Status</th></tr></thead>
             <tbody>
               {requests.map(r => (
-                <tr 
-                  key={r.id} 
-                  onClick={() => navigate(`/faculty/jd-builder?requestId=${r.id}`)} 
-                  style={{ cursor: 'pointer' }}
-                  className="hover-row"
-                >
+                <tr key={r.id} className="hover-row">
                   <td><span style={{ fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--text-muted)' }}>{r.id}</span></td>
                   <td style={{ fontWeight: 600 }}>{r.title}<div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{r.requested_by}</div></td>
                   <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{r.department}</td>

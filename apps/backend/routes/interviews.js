@@ -292,8 +292,8 @@ router.post('/interviews/:id/end', requireAuth, requirePermission('can_conduct_i
 })
 
 // ─── Proceed / Reject Candidate ─────────────────────────────────────────────
-// Faculty flow:  technical interview → final_review (CHRO Final Interview)
-// CHRO flow:    behavioral interview → offered
+// Faculty flow:  technical interview → behavioral_interview (CHRO conducts Behavioral)
+// CHRO flow:    behavioral interview → final_review → offered (CHRO final decision)
 router.post('/interviews/:id/proceed', requireAuth, requirePermission('can_conduct_interview'), async (req, res) => {
   const { rows: sessions } = await query(
     `SELECT s.application_id, s.type, a.stage, a.candidate_id
@@ -306,16 +306,17 @@ router.post('/interviews/:id/proceed', requireAuth, requirePermission('can_condu
 
   const { application_id, type, stage, candidate_id } = sessions[0]
 
-  // Determine next stage:
-  // technical interview → final_review (faculty approves → CHRO pipeline)
-  // behavioral interview → offered (CHRO final decision)
+  // Correct workflow:
+  // Faculty:   technical interview → behavioral_interview (CHRO conducts next)
+  // CHRO:      behavioral interview → final_review (CHRO final decision stage)
+  // CHRO:      final_review → offered (via CandidateProfile make-offer button)
   let nextStage
   if (type === 'technical') {
-    nextStage = 'final_review'
+    nextStage = 'behavioral_interview'
   } else if (type === 'behavioral') {
-    nextStage = 'offered'
+    nextStage = 'final_review'
   } else {
-    nextStage = 'offered'
+    nextStage = 'final_review'
   }
 
   console.log(`[PIPELINE] Proceed: application=${application_id}, type=${type}, ${stage} → ${nextStage} by user=${req.currentUser.userId}`)

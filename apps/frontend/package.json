@@ -3,8 +3,20 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --port 5176",
+    "dev": "vite --port 5173",
+    "faculty": "vite --config vite.config.faculty.js   --mode faculty",
+    "hiring": "vite --config vite.config.hiring.js    --mode hiring",
+    "chro": "vite --config vite.config.chro.js      --mode chro",
+    "recruiter": "vite --config vite.config.recruiter.js --mode recruiter",
+    "candidate": "vite --config vite.config.candidate.js --mode candidate",
+    "dev:all": "concurrently -n \"landing,faculty,hiring,chro,recruiter,candidate\" -c \"bgBlue.bold,bgGreen.bold,bgYellow.bold,bgMagenta.bold,bgCyan.bold,bgRed.bold\" \"npm:dev\" \"npm:faculty\" \"npm:hiring\" \"npm:chro\" \"npm:recruiter\" \"npm:candidate\"",
     "build": "vite build",
+    "build:faculty": "vite build --config vite.config.faculty.js   --mode faculty",
+    "build:hiring": "vite build --config vite.config.hiring.js    --mode hiring",
+    "build:chro": "vite build --config vite.config.chro.js      --mode chro",
+    "build:recruiter": "vite build --config vite.config.recruiter.js --mode recruiter",
+    "build:candidate": "vite build --config vite.config.candidate.js --mode candidate",
+    "build:all": "npm run build && npm run build:faculty && npm run build:hiring && npm run build:chro && npm run build:recruiter && npm run build:candidate",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -15,6 +27,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",
+    "concurrently": "^9.2.1",
     "vite": "^5.2.0"
   },
   "description": "",

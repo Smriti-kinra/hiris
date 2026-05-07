@@ -2,7 +2,7 @@ import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import hirisLogo from '../../assets/hiris-logo.svg'
 
-export default function Navbar() {
+export default function Navbar({ hideNavItems = false }) {
   const { user, theme, toggleTheme } = useAuth()
 
   return (
@@ -14,10 +14,12 @@ export default function Navbar() {
           </span>
         </Link>
 
-        <nav className="landing-links" aria-label="Primary navigation">
-          <NavLink to="/" end>Home</NavLink>
-          <NavLink to="/pricing">Pricing</NavLink>
-        </nav>
+        {!hideNavItems && (
+          <nav className="landing-links" aria-label="Primary navigation">
+            <NavLink to="/" end>Home</NavLink>
+            <NavLink to="/pricing">Pricing</NavLink>
+          </nav>
+        )}
 
         <div className="landing-actions">
           <button
@@ -29,13 +31,15 @@ export default function Navbar() {
             {theme === 'light' ? <MoonIcon /> : <SunIcon />}
           </button>
 
-          {user ? (
-            <Link to="/dashboard" className="btn btn-primary">Dashboard</Link>
-          ) : (
-            <>
-              <Link to="/login" className="btn btn-ghost">Login</Link>
-              <Link to="/login" className="btn btn-primary">Get Started</Link>
-            </>
+          {!hideNavItems && (
+            user ? (
+              <Link to="/dashboard" className="btn btn-primary">Dashboard</Link>
+            ) : (
+              <>
+                <Link to="/login" className="btn btn-ghost">Login</Link>
+                <Link to="/login" className="btn btn-primary">Get Started</Link>
+              </>
+            )
           )}
         </div>
       </div>

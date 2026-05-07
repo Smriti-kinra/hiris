@@ -1,0 +1,186 @@
+version: '3.8'
+
+# ─── HIRIS Multi-Portal Docker Compose ────────────────────────────────────────
+# Runs each portal as a separate nginx container on its own port.
+# All portals share the same backend API and PostgreSQL database.
+#
+# Usage:
+#   docker-compose -f docker-compose.multi.yml up
+#
+# Required environment variables (set in shell or root .env):
+#   JWT_SECRET            — min 32 random characters
+#   REGISTRATION_SECRET   — secret for /api/auth/register-org
+#   POSTGRES_PASSWORD     — database password
+#
+# Port mapping:
+#   5173 → landing / login
+#   5174 → faculty portal
+#   5175 → hiring manager portal
+#   5176 → chro portal
+#   5177 → recruiter portal
+#   5178 → candidate portal
+#   3001 → backend API
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: hiris-db
+    environment:
+      POSTGRES_USER: hiris_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hiris_password}
+      POSTGRES_DB: hiris_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./apps/backend/migrations/000_schema.sql:/docker-entrypoint-initdb.d/000_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hiris_admin -d hiris_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./apps/backend
+    container_name: hiris-backend
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgres://hiris_admin:${POSTGRES_PASSWORD:-hiris_password}@postgres:5432/hiris_db
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRY=7d
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176,http://localhost:5177,http://localhost:5178}
+      - REGISTRATION_SECRET=${REGISTRATION_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Landing / Login Portal (port 5173) ────────────────────────────────────
+  portal-landing:
+    build:
+      context: ./apps/frontend
+      args:
+        PORTAL: landing
+        BUILD_CMD: "npm run build"
+    container_name: hiris-portal-landing
+    ports:
+      - "5173:80"
+    environment:
+      - VITE_API_ORIGIN=http://hiris-backend:3001
+      - VITE_PORTAL_URL_FACULTY=http://localhost:5174
+      - VITE_PORTAL_URL_HIRING=http://localhost:5175
+      - VITE_PORTAL_URL_CHRO=http://localhost:5176
+      - VITE_PORTAL_URL_RECRUITER=http://localhost:5177
+      - VITE_PORTAL_URL_CANDIDATE=http://localhost:5178
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # ── Faculty Portal (port 5174) ────────────────────────────────────────────
+  portal-faculty:
+    build:
+      context: ./apps/frontend
+      args:
+        PORTAL: faculty
+        BUILD_CMD: "npm run build:faculty"
+        DIST_DIR: "dist/faculty"
+    container_name: hiris-portal-faculty
+    ports:
+      - "5174:80"
+    environment:
+      - VITE_PORTAL_ID=faculty
+      - VITE_API_ORIGIN=http://hiris-backend:3001
+      - VITE_PORTAL_URL_FACULTY=http://localhost:5174
+      - VITE_PORTAL_URL_HIRING=http://localhost:5175
+      - VITE_PORTAL_URL_CHRO=http://localhost:5176
+      - VITE_PORTAL_URL_RECRUITER=http://localhost:5177
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # ── Hiring Manager Portal (port 5175) ─────────────────────────────────────
+  portal-hiring:
+    build:
+      context: ./apps/frontend
+      args:
+        PORTAL: hiring
+        BUILD_CMD: "npm run build:hiring"
+        DIST_DIR: "dist/hiring"
+    container_name: hiris-portal-hiring
+    ports:
+      - "5175:80"
+    environment:
+      - VITE_PORTAL_ID=hiring
+      - VITE_API_ORIGIN=http://hiris-backend:3001
+      - VITE_PORTAL_URL_FACULTY=http://localhost:5174
+      - VITE_PORTAL_URL_HIRING=http://localhost:5175
+      - VITE_PORTAL_URL_CHRO=http://localhost:5176
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # ── CHRO Portal (port 5176) ───────────────────────────────────────────────
+  portal-chro:
+    build:
+      context: ./apps/frontend
+      args:
+        PORTAL: chro
+        BUILD_CMD: "npm run build:chro"
+        DIST_DIR: "dist/chro"
+    container_name: hiris-portal-chro
+    ports:
+      - "5176:80"
+    environment:
+      - VITE_PORTAL_ID=chro
+      - VITE_API_ORIGIN=http://hiris-backend:3001
+      - VITE_PORTAL_URL_FACULTY=http://localhost:5174
+      - VITE_PORTAL_URL_HIRING=http://localhost:5175
+      - VITE_PORTAL_URL_CHRO=http://localhost:5176
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # ── Recruiter Portal (port 5177) ──────────────────────────────────────────
+  portal-recruiter:
+    build:
+      context: ./apps/frontend
+      args:
+        PORTAL: recruiter
+        BUILD_CMD: "npm run build:recruiter"
+        DIST_DIR: "dist/recruiter"
+    container_name: hiris-portal-recruiter
+    ports:
+      - "5177:80"
+    environment:
+      - VITE_PORTAL_ID=recruiter
+      - VITE_API_ORIGIN=http://hiris-backend:3001
+      - VITE_PORTAL_URL_HIRING=http://localhost:5175
+      - VITE_PORTAL_URL_RECRUITER=http://localhost:5177
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # ── Candidate Portal (port 5178) ──────────────────────────────────────────
+  portal-candidate:
+    build:
+      context: ./apps/frontend
+      args:
+        PORTAL: candidate
+        BUILD_CMD: "npm run build:candidate"
+        DIST_DIR: "dist/candidate"
+    container_name: hiris-portal-candidate
+    ports:
+      - "5178:80"
+    environment:
+      - VITE_PORTAL_ID=candidate
+      - VITE_API_ORIGIN=http://hiris-backend:3001
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  pgdata:

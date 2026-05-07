@@ -5,10 +5,19 @@
   "description": "HIRIS is a full-stack hiring platform with role-based portals for CHRO, Hiring Managers, and Faculty.",
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
-    "bootstrap": "npm install",
-    "build": "npm --workspaces run build",
-    "test": "npm --workspaces test",
-    "start": "npm --workspace @hiris/backend start"
+    "bootstrap":      "npm install",
+    "build":          "npm --workspaces run build",
+    "test":           "npm --workspaces test",
+    "start":          "npm --workspace @hiris/backend start",
+    "backend":        "npm --workspace @hiris/backend start",
+    "dev":            "npm --workspace @hiris/frontend run dev",
+    "faculty":        "npm --workspace @hiris/frontend run faculty",
+    "hiring":         "npm --workspace @hiris/frontend run hiring",
+    "chro":           "npm --workspace @hiris/frontend run chro",
+    "recruiter":      "npm --workspace @hiris/frontend run recruiter",
+    "candidate":      "npm --workspace @hiris/frontend run candidate",
+    "dev:all":        "npm --workspace @hiris/frontend run dev:all",
+    "build:all":      "npm --workspace @hiris/frontend run build:all"
   },
   "repository": {
     "type": "git",

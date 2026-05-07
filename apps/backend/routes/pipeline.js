@@ -57,7 +57,7 @@ router.get('/pipeline/final-interview', requireAuth, requirePermission('can_view
       LIMIT 1
     ) fi ON true
     WHERE a.org_id = $1
-      AND a.stage = 'final_review'
+      AND a.stage IN ('behavioral_interview', 'final_review')
     ORDER BY a.applied_at DESC
   `, [req.currentUser.orgId])
 
@@ -100,8 +100,8 @@ router.post('/pipeline/schedule-final-interview', requireAuth, requirePermission
     [application_id, req.currentUser.orgId]
   )
   if (!appRows[0]) return res.status(404).json({ error: 'Application not found.' })
-  if (appRows[0].stage !== 'final_review') {
-    return res.status(400).json({ error: `Application must be in final_review stage (currently: ${appRows[0].stage}).` })
+  if (!['behavioral_interview', 'final_review'].includes(appRows[0].stage)) {
+    return res.status(400).json({ error: `Application must be in behavioral_interview or final_review stage (currently: ${appRows[0].stage}).` })
   }
 
   const { rows } = await query(`

@@ -4,6 +4,33 @@ import Navbar from '../../components/layout/Navbar'
 import { useAuth } from '../../context/AuthContext'
 import hirisLogo from '../../assets/hiris-logo.svg'
 
+// Portal URL map — reads from env (each portal sets these via its .env.* file)
+// Falls back to same-origin single-app paths for backward compat.
+const PORTAL_URLS = {
+  faculty:         import.meta.env.VITE_PORTAL_URL_FACULTY   || null,
+  hiring:          import.meta.env.VITE_PORTAL_URL_HIRING    || null,
+  hiring_manager:  import.meta.env.VITE_PORTAL_URL_HIRING    || null,
+  chro:            import.meta.env.VITE_PORTAL_URL_CHRO      || null,
+  recruiter:       import.meta.env.VITE_PORTAL_URL_RECRUITER || null,
+}
+
+/**
+ * Returns the URL the user should land on after login.
+ * When running in multi-portal mode (env vars set), performs a hard cross-origin redirect.
+ * Falls back to /dashboard (single-app mode) if env vars are absent.
+ */
+function getPostLoginDestination(user) {
+  if (!user) return '/login'
+  if (user.needsOnboarding || user.isNewUser || user.onboarding_required) return '/onboarding'
+  const portalUrl = PORTAL_URLS[user.portal]
+  if (portalUrl && portalUrl !== window.location.origin) {
+    // Multi-portal mode: return the full URL for hard navigation
+    return portalUrl + (user.home_path || '')
+  }
+  // Single-app fallback: relative path
+  return user.home_path || '/dashboard'
+}
+
 const DEMO_ACCOUNTS = [
   { email: 'smriti.kinra@hiris.demo', role: 'CHRO', label: 'Smriti Kinra' },
   { email: 'sartajdeep.singh@hiris.demo', role: 'Hiring Manager', label: 'Sartajdeep Singh' },
@@ -12,10 +39,7 @@ const DEMO_ACCOUNTS = [
 
 const DEMO_PASSWORD = 'hiris2026'
 
-function postLoginPath(user) {
-  const needsOnboarding = user?.needsOnboarding || user?.isNewUser || user?.onboarding_required
-  return needsOnboarding ? '/onboarding' : '/dashboard'
-}
+
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -28,7 +52,12 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      navigate('/dashboard', { replace: true })
+      const dest = getPostLoginDestination(user)
+      if (dest.startsWith('http')) {
+        window.location.href = dest
+      } else {
+        navigate(dest, { replace: true })
+      }
     }
   }, [loading, navigate, user])
 
@@ -38,7 +67,14 @@ export default function LoginPage() {
 
     try {
       const signedInUser = await login(emailInput.trim(), passwordInput)
-      navigate(postLoginPath(signedInUser), { replace: true })
+      const dest = getPostLoginDestination(signedInUser)
+
+      if (dest.startsWith('http')) {
+        // Cross-portal hard redirect (multi-portal mode)
+        window.location.href = dest
+      } else {
+        navigate(dest, { replace: true })
+      }
     } catch (err) {
       setError(err.message)
     } finally {

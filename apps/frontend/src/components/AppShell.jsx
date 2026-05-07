@@ -41,40 +41,53 @@ function homeSection(user) {
   return ['hiring', 'faculty', 'chro'].includes(section) ? section : 'hiring'
 }
 
-function sectionPath(section, path) {
-  return `/${section}${path}`
+// ── Portal-scoped nav configs ─────────────────────────────────────────────────
+// Each portal only sees its own navigation items.
+// Paths are the same as the existing page routes for backward compatibility.
+
+const PORTAL_NAV_BUILDERS = {
+  faculty: (user) => [
+    { label: 'Overview',        to: '/faculty',             icon: 'home',      end: true },
+    { label: 'My Requests',     to: '/faculty/requests',    icon: 'briefcase', show: hasPerm(user, 'can_request_jobs') || hasPerm(user, 'can_view_requests') },
+    { label: 'JD Reviews',      to: '/faculty/jd-reviews',  icon: 'file',      show: hasPerm(user, 'can_review_jd') },
+    { label: 'Interviews',      to: '/faculty/interviews',  icon: 'calendar',  show: hasPerm(user, 'can_conduct_interview') },
+  ].filter(i => i.show !== false),
+
+  hiring: (user) => [
+    { label: 'Overview',         to: '/hiring',                icon: 'home',      end: true },
+    { label: 'Hiring Requests',  to: '/hiring/requests',       icon: 'briefcase', show: hasPerm(user, 'can_view_requests') },
+    { label: 'Posted Jobs',      to: '/hiring/posted-jobs',    icon: 'briefcase', show: hasPerm(user, 'can_view_jobs') },
+    { label: 'Candidates',       to: '/hiring/candidates',     icon: 'users',     show: hasPerm(user, 'can_view_candidates') },
+    { label: 'Schedule',         to: '/hiring/schedule',       icon: 'calendar',  show: hasPerm(user, 'can_view_interviews') },
+  ].filter(i => i.show !== false),
+
+  chro: (user) => [
+    { label: 'Overview',         to: '/chro',                  icon: 'home',      end: true },
+    { label: 'Candidates',       to: '/chro/candidates',       icon: 'users',     show: hasPerm(user, 'can_view_candidates') },
+    { label: 'Schedule',         to: '/chro/interviews',       icon: 'calendar',  show: hasPerm(user, 'can_view_interviews') },
+    { label: 'Analytics',        to: '/chro/analytics',        icon: 'chart',     show: hasPerm(user, 'can_view_analytics') },
+    { label: 'Policies',         to: '/chro/policies',         icon: 'policy',    show: hasPerm(user, 'can_view_policies') },
+    { label: 'Team',             to: '/chro/team',             icon: 'team',      show: hasPerm(user, 'can_manage_team') },
+    { label: 'Role Management',  to: '/settings/roles',        icon: 'settings',  show: hasPerm(user, 'can_manage_roles') },
+  ].filter(i => i.show !== false),
+
+  recruiter: (user) => [
+    { label: 'Overview',         to: '/hiring',                icon: 'home',      end: true },
+    { label: 'Hiring Requests',  to: '/hiring/requests',       icon: 'briefcase', show: hasPerm(user, 'can_view_requests') },
+    { label: 'Candidates',       to: '/hiring/candidates',     icon: 'users',     show: hasPerm(user, 'can_view_candidates') },
+    { label: 'Posted Jobs',      to: '/hiring/posted-jobs',    icon: 'briefcase', show: hasPerm(user, 'can_view_jobs') },
+    { label: 'Schedule',         to: '/hiring/schedule',       icon: 'calendar',  show: hasPerm(user, 'can_view_interviews') },
+  ].filter(i => i.show !== false),
 }
 
+// Fallback generic nav (used by single-app mode / AppRoutes.jsx)
 function buildNav(user) {
   const section = homeSection(user)
   const requestPath = section === 'faculty' ? '/faculty/requests' : '/hiring/requests'
-  const candidatesPath = sectionPath(section, '/candidates')
-  const interviewsPath = section === 'hiring' ? '/hiring/schedule' : sectionPath(section, '/interviews')
+  const candidatesPath = `/${section}/candidates`
+  const interviewsPath = section === 'hiring' ? '/hiring/schedule' : `/${section}/interviews`
 
-  if (section === 'chro') {
-    return [
-      { label: 'Overview', to: '/chro', icon: 'home', end: true, show: true },
-      { label: 'Policies', to: '/chro/policies', icon: 'policy', show: true },
-      { label: 'Team', to: '/chro/team', icon: 'team', show: true },
-      { label: 'Analytics', to: '/chro/analytics', icon: 'star', show: true },
-      { label: 'Final Interview', to: '/chro/interviews', icon: 'calendar', show: true },
-      { label: 'Role Management', to: '/settings/roles', icon: 'settings', show: true },
-    ]
-  }
-
-  if (section === 'faculty') {
-    return [
-      { label: 'Overview', to: '/faculty', icon: 'home', end: true, show: true },
-      { label: 'My Requests', to: '/faculty/requests', icon: 'briefcase', show: true },
-      { label: 'JD Reviews', to: '/faculty/jd-reviews', icon: 'file', show: true },
-      { label: 'Candidates', to: '/faculty/candidates', icon: 'users', show: true },
-      { label: 'Schedule', to: '/faculty/interviews', icon: 'calendar', show: true },
-    ]
-  }
-
-  // default to hiring manager
   return [
-    { label: 'Overview', to: user?.home_path || '/dashboard', icon: 'home', end: true, show: true },
     { label: 'Hiring Requests', to: requestPath, icon: 'briefcase', show: true },
     { label: 'Job Postings', to: '/hiring/jobs', icon: 'file', show: true },
     { label: 'Posted Jobs', to: '/hiring/posted-jobs', icon: 'globe', show: true },
@@ -113,7 +126,8 @@ export default function AppShell({ portal, pageTitle, children }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { user, logout, theme, toggleTheme } = useAuth()
   const navigate = useNavigate()
-  const nav = buildNav(user)
+  const navBuilder = PORTAL_NAV_BUILDERS[portal]
+  const nav = navBuilder ? navBuilder(user) : buildNav(user)
 
   const initials = user?.name
     ? user.name.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase()

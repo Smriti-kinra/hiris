@@ -7,8 +7,8 @@ BACKEND="$ROOT/apps/backend"
 FRONTEND="$ROOT/apps/frontend"
 
 # ── 1. Kill any lingering processes on our ports ─────────────────────
-echo "→ Clearing ports 3001, 5176…"
-for PORT in 3001 5176; do
+echo "→ Clearing ports 3001 and 5173-5178…"
+for PORT in 3001 5173 5174 5175 5176 5177 5178; do
   lsof -ti tcp:$PORT | xargs kill -9 2>/dev/null || true
 done
 
@@ -44,10 +44,10 @@ echo "→ Starting backend on :3001"
 npm run dev &
 BACKEND_PID=$!
 
-# ── 7. Start frontend ─────────────────────────────────────────
-echo "→ Starting HIRIS frontend app on :5176"
+# ── 7. Start frontend portals ───────────────────────────────────
+echo "→ Starting HIRIS multi-portal apps (ports 5173-5178)"
 cd "$FRONTEND"
-npm run dev &
+npm run dev:all &
 FRONTEND_PID=$!
 
 echo ""
@@ -55,7 +55,7 @@ echo "  ╔═══════════════════════
 echo "  ║        HIRIS is running                  ║"
 echo "  ╠══════════════════════════════════════════╣"
 echo "  ║  Backend API    http://localhost:3001     ║"
-echo "  ║  HIRIS App      http://localhost:5176     ║"
+echo "  ║  HIRIS App      http://localhost:5173     ║"
 echo "  ╠══════════════════════════════════════════╣"
 echo "  ║  Demo accounts (click Quick Login):      ║"
 echo "  ║  smriti.kinra@hiris.demo     → CHRO      ║"

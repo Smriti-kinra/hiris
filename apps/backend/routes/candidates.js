@@ -1,7 +1,7 @@
 const express = require('express')
 const router  = express.Router()
 const { query }       = require('../config/db')
-const { requireAuth, requirePermission, hasPermission } = require('../middleware/auth')
+const { requireAuth, requirePermission, requireAnyPermission, hasPermission } = require('../middleware/auth')
 
 const STAGE_LABEL = {
   applied:              'Applied',
@@ -188,7 +188,9 @@ router.patch('/candidates/:id/stage', requireAuth, requirePermission('can_move_c
 })
 
 // ─── Save notes ───────────────────────────────────────────────────────────────
-router.patch('/candidates/:id/notes', requireAuth, requirePermission('can_update_candidate_notes'), async (req, res) => {
+// Allow anyone who can view candidates (hiring managers, faculty, CHRO) to save notes.
+// The note column written to is determined by the caller's role.
+router.patch('/candidates/:id/notes', requireAuth, requireAnyPermission(['can_update_candidate_notes', 'can_view_candidates', 'can_conduct_interview']), async (req, res) => {
   const { manager_notes, faculty_notes, notes } = req.body
   const hasManagerNotes = Object.prototype.hasOwnProperty.call(req.body, 'manager_notes')
   const hasFacultyNotes = Object.prototype.hasOwnProperty.call(req.body, 'faculty_notes')

@@ -65,6 +65,7 @@ export default function CandidateJobPortal() {
   }
 
   const handleSubmit = async (e) => {
+    e.preventDefault()
     const reqs = job.jd_json?.requirements || { name: true, email: true, resume: true }
     
     if (reqs.name && !form.name.trim()) return setError('Full Name is required.')
@@ -115,8 +116,8 @@ export default function CandidateJobPortal() {
   
   if (error && !job) {
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--slate-50)' }}>
-        <Navbar />
+      <div style={{ minHeight: '100vh', background: 'var(--bg-app)' }}>
+        <Navbar hideNavItems />
         <main style={{ padding: '140px 24px', display: 'grid', placeItems: 'center' }}>
           <div className="card" style={{ maxWidth: 480, textAlign: 'center', padding: 40 }}>
             <span className="material-symbols-outlined" style={{ fontSize: 48, color: 'var(--slate-300)', marginBottom: 20 }}>event_busy</span>
@@ -130,7 +131,8 @@ export default function CandidateJobPortal() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--slate-50)', fontFamily: 'var(--font-body)' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-app)', fontFamily: 'var(--font-body)' }}>
+      <Navbar hideNavItems />
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
       <section style={{
         background: 'linear-gradient(160deg, #0F172A 0%, #1e3a4a 55%, #28666E 100%)',
@@ -167,7 +169,19 @@ export default function CandidateJobPortal() {
 
       {/* ── MAIN CONTENT ─────────────────────────────────────────────────── */}
       <main className="container" style={{ marginTop: -40, paddingBottom: 100, position: 'relative', zIndex: 2 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 32, alignItems: 'start' }}>
+        {success ? (
+          <div className="card" style={{ maxWidth: 600, margin: '60px auto', textAlign: 'center', padding: '60px 40px' }}>
+            <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'var(--teal-10)', color: 'var(--teal)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 40 }}>check_circle</span>
+            </div>
+            <h2 style={{ fontSize: 28, marginBottom: 16 }}>Application Submitted!</h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 16, lineHeight: 1.6, marginBottom: 40 }}>
+              Thank you for applying for the <strong>{job.title}</strong> position. Our hiring team will review your profile and get back to you via email.
+            </p>
+            <button onClick={() => window.location.reload()} className="btn btn-primary" style={{ padding: '12px 24px', fontSize: 15 }}>Submit Another Application</button>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 32, alignItems: 'start' }}>
           
           {/* Job Details */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -177,8 +191,8 @@ export default function CandidateJobPortal() {
                 Role Overview
               </h2>
               <div 
-                style={{ color: 'var(--slate-600)', fontSize: 15, lineHeight: 1.8 }} 
-                dangerouslySetInnerHTML={{ __html: sanitizeHtml(job.summary) || 'No summary provided.' }} 
+                style={{ color: 'var(--text-secondary)', fontSize: 15, lineHeight: 1.8 }} 
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(job.jd_json?.summary || job.summary) || 'No summary provided.' }} 
               />
             </div>
 
@@ -189,20 +203,44 @@ export default function CandidateJobPortal() {
               </h2>
               <div 
                 className="job-html-content"
-                style={{ color: 'var(--slate-600)', fontSize: 15, lineHeight: 1.8 }} 
+                style={{ color: 'var(--text-secondary)', fontSize: 15, lineHeight: 1.8 }} 
                 dangerouslySetInnerHTML={{ __html: sanitizeHtml(job.responsibilities) || 'Shared during the interview process.' }} 
               />
             </div>
+
+            {job.jd_json?.jobRequirements && (
+              <div className="card" style={{ padding: 32 }}>
+                <h2 style={{ fontSize: 18, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span className="material-symbols-outlined" style={{ color: 'var(--teal)' }}>fact_check</span>
+                  Job Requirements
+                </h2>
+                <div style={{ color: 'var(--text-secondary)', fontSize: 15, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
+                  {job.jd_json.jobRequirements}
+                </div>
+              </div>
+            )}
+
+            {job.jd_json?.preferredQualifications && (
+              <div className="card" style={{ padding: 32 }}>
+                <h2 style={{ fontSize: 18, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span className="material-symbols-outlined" style={{ color: 'var(--teal)' }}>star</span>
+                  Preferred Qualifications
+                </h2>
+                <div style={{ color: 'var(--text-secondary)', fontSize: 15, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
+                  {job.jd_json.preferredQualifications}
+                </div>
+              </div>
+            )}
 
             {job.skills?.length > 0 && (
               <div className="card" style={{ padding: 32 }}>
                 <h2 style={{ fontSize: 18, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span className="material-symbols-outlined" style={{ color: 'var(--teal)' }}>verified</span>
-                  Requirements
+                  Required Skills
                 </h2>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {job.skills.map(skill => (
-                    <span key={skill} className="badge" style={{ background: 'var(--slate-100)', color: 'var(--slate-700)', border: '1px solid var(--border)' }}>
+                    <span key={skill} className="badge" style={{ background: 'var(--bg-input)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}>
                       {skill}
                     </span>
                   ))}
@@ -213,20 +251,7 @@ export default function CandidateJobPortal() {
 
           {/* Application Form */}
           <div className="card" style={{ padding: 32, position: 'sticky', top: 100 }}>
-            {success ? (
-              <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--teal-10)', color: 'var(--teal)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 32 }}>check_circle</span>
-                </div>
-                <h2 style={{ fontSize: 24, marginBottom: 12 }}>Application Submitted!</h2>
-                <p style={{ color: 'var(--slate-600)', lineHeight: 1.6, marginBottom: 32 }}>
-                  Thank you for applying. Our hiring team will review your profile and get back to you via email.
-                </p>
-                <button onClick={() => window.location.reload()} className="btn btn-primary">Submit Another Application</button>
-              </div>
-            ) : (
-              <>
-                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                     {(job.jd_json?.requirements?.name !== false) && (
                       <div className="form-group">
@@ -307,20 +332,20 @@ export default function CandidateJobPortal() {
                   <div style={{ 
                     marginTop: 12, 
                     padding: 24, 
-                    background: 'var(--slate-50)', 
+                    background: 'var(--bg-input)', 
                     borderRadius: 16, 
                     border: '1px solid var(--border)',
                     boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
                       <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--teal)' }}>auto_awesome</span>
-                      <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--slate-500)' }}>AI Pre-Screening</span>
+                      <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>AI Pre-Screening</span>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 20, maxHeight: 300, overflowY: 'auto', paddingRight: 4 }}>
                       {chatAnswers.map((ca, idx) => (
                         <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                          <div style={{ alignSelf: 'flex-start', background: 'white', padding: '12px 16px', borderRadius: '16px 16px 16px 4px', border: '1px solid var(--border)', fontSize: 13, maxWidth: '85%', boxShadow: '0 2px 4px rgba(0,0,0,0.03)' }}>
+                          <div style={{ alignSelf: 'flex-start', background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '12px 16px', borderRadius: '16px 16px 16px 4px', border: '1px solid var(--border)', fontSize: 13, maxWidth: '85%', boxShadow: '0 2px 4px rgba(0,0,0,0.03)' }}>
                             {ca.question}
                           </div>
                           <div style={{ alignSelf: 'flex-end', background: 'var(--teal)', color: 'white', padding: '12px 16px', borderRadius: '16px 16px 4px 16px', fontSize: 13, maxWidth: '85%', boxShadow: '0 4px 12px rgba(40,102,110,0.2)' }}>
@@ -330,7 +355,7 @@ export default function CandidateJobPortal() {
                       ))}
                       
                       {chatStep < CHAT_QUESTIONS.length && (
-                        <div style={{ alignSelf: 'flex-start', background: 'white', padding: '12px 16px', borderRadius: '16px 16px 16px 4px', border: '1px solid var(--border)', fontSize: 13, maxWidth: '85%', boxShadow: '0 2px 4px rgba(0,0,0,0.03)', animation: 'fadeIn 0.3s ease' }}>
+                        <div style={{ alignSelf: 'flex-start', background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '12px 16px', borderRadius: '16px 16px 16px 4px', border: '1px solid var(--border)', fontSize: 13, maxWidth: '85%', boxShadow: '0 2px 4px rgba(0,0,0,0.03)', animation: 'fadeIn 0.3s ease' }}>
                           {CHAT_QUESTIONS[chatStep]}
                         </div>
                       )}
@@ -344,7 +369,7 @@ export default function CandidateJobPortal() {
                           value={currentChatInput}
                           onChange={e => setCurrentChatInput(e.target.value)}
                           onKeyDown={e => e.key === 'Enter' && handleChatSubmit()}
-                          style={{ background: 'white' }}
+                          style={{ background: 'var(--bg-card)' }}
                         />
                         <button type="button" onClick={handleChatSubmit} className="btn btn-primary" style={{ padding: '0 16px' }}>
                           <span className="material-symbols-outlined">send</span>
@@ -368,10 +393,9 @@ export default function CandidateJobPortal() {
                     {submitting ? 'Submitting Application...' : 'Submit Application'}
                   </button>
                 </form>
-              </>
-            )}
+            </div>
           </div>
-        </div>
+        )}
       </main>
     </div>
   )
@@ -381,7 +405,7 @@ const labelStyle = {
   display: 'block',
   fontSize: 11,
   fontWeight: 700,
-  color: 'var(--slate-500)',
+  color: 'var(--text-muted)',
   textTransform: 'uppercase',
   letterSpacing: '0.05em',
   marginBottom: 6,
