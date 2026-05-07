@@ -16,7 +16,7 @@ export default function CHROInterviews() {
   }, [])
 
   const handleStartInterview = async (i) => {
-    // CHRO always conducts behavioral interviews
+    // Final-round interviews use the behavioral room.
     const type = 'behavioral'
     const res = await apiFetch('/interviews/start', {
       method: 'POST',

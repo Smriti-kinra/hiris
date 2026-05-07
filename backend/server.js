@@ -86,7 +86,14 @@ app.use('/uploads', express.static('uploads'))
 const PORT = process.env.PORT || 3001
 app.get('/', (_, res) => res.send(`<html><body style="font-family:sans-serif;background:#0F172A;color:white;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center"><h1>HIRIS API</h1><p>Running on port ${PORT}</p><a href="/api-docs" style="color:#10B981">API Docs</a></div></body></html>`))
 
-const swaggerSpec = swaggerJsdoc({ swaggerDefinition: { openapi:'3.0.0', info:{ title:'HIRIS API', version:'1.0.0' }, servers:[{ url:'http://localhost:3001' }] }, apis:['./routes/*.js'] })
+const swaggerSpec = swaggerJsdoc({
+  swaggerDefinition: {
+    openapi: '3.0.0',
+    info: { title: 'HIRIS API', version: '1.0.0' },
+    servers: [{ url: process.env.PUBLIC_API_URL || `http://localhost:${PORT}` }],
+  },
+  apis: ['./routes/*.js'],
+})
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
 
 app.use('/api/auth',  require('./routes/auth'))

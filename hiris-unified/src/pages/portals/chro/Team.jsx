@@ -2,9 +2,6 @@ import { useState, useEffect } from 'react'
 import AppShell from '../../../components/AppShell'
 import { apiFetch } from '../../../services/api'
 
-const ROLE_BADGE = { hiring_manager: 'badge-blue', faculty: 'badge-gray' }
-const ROLE_LABEL = { hiring_manager: 'Hiring Manager', faculty: 'Faculty' }
-
 export default function CHROTeam() {
   const [team, setTeam]     = useState([])
   const [loading, setLoading] = useState(true)
@@ -32,7 +29,7 @@ export default function CHROTeam() {
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span className={`badge ${ROLE_BADGE[m.role] || 'badge-gray'}`}>{ROLE_LABEL[m.role] || m.role}</span>
+                <span className="badge badge-gray">{m.role_name || m.role}</span>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: 20, fontWeight: 800, color: m.active_requests > 0 ? 'var(--accent-amber)' : 'var(--text-muted)' }}>{m.active_requests}</div>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>open requests</div>

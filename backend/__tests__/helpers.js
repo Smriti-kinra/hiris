@@ -84,14 +84,14 @@ async function seedTestOrg() {
 
   // Insert roles: admin role and a limited role
   const { rows: [adminRole] } = await dbQuery(
-    `INSERT INTO roles (org_id, name, permissions)
-     VALUES ($1, 'Test Admin', '{"is_admin": true, "can_manage_roles": true, "can_view_analytics": true}')
+    `INSERT INTO roles (org_id, name, landing_portal, home_path, permissions, visible_stages)
+     VALUES ($1, 'Test Admin', 'chro', '/chro', '{"is_admin": true, "can_manage_roles": true, "can_view_analytics": true}', ARRAY['applied','under_review','technical_interview','behavioral_interview','final_review','offered','rejected'])
      RETURNING id`,
     [org.id]
   )
   const { rows: [limitedRole] } = await dbQuery(
-    `INSERT INTO roles (org_id, name, permissions)
-     VALUES ($1, 'Test Limited', '{}')
+    `INSERT INTO roles (org_id, name, landing_portal, home_path, permissions, visible_stages)
+     VALUES ($1, 'Test Limited', 'hiring', '/hiring', '{"can_request_jobs": true, "can_view_requests": true, "can_approve_requests": true}', ARRAY['applied','under_review'])
      RETURNING id`,
     [org.id]
   )
@@ -122,6 +122,7 @@ async function teardownTestOrg(orgId) {
   await dbQuery(`DELETE FROM headcount_requests WHERE requested_by IN (SELECT id FROM users WHERE org_id=$1)`, [orgId]).catch(() => {})
   await dbQuery(`DELETE FROM jobs           WHERE manager_id    IN (SELECT id FROM users WHERE org_id=$1)`, [orgId]).catch(() => {})
   await dbQuery(`DELETE FROM users          WHERE org_id=$1`, [orgId])
+  await dbQuery(`DELETE FROM role_audit_logs WHERE org_id=$1`, [orgId]).catch(() => {})
   await dbQuery(`DELETE FROM roles          WHERE org_id=$1`, [orgId])
   await dbQuery(`DELETE FROM orgs           WHERE id=$1`, [orgId])
 }

@@ -4,7 +4,7 @@ const multer   = require('multer')
 const path     = require('path')
 const fs       = require('fs')
 const { query }       = require('../config/db')
-const { requireAuth } = require('../middleware/auth')
+const { requireAuth, requirePermission } = require('../middleware/auth')
 
 const UPLOAD_DIR = path.join(__dirname, '..', 'uploads')
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true })
@@ -26,7 +26,7 @@ const upload = multer({
 })
 
 // ─── GET latest institutional values PDF ─────────────────────────────────────
-router.get('/chro/institutional-values', requireAuth, async (req, res) => {
+router.get('/chro/institutional-values', requireAuth, requirePermission('can_view_policies'), async (req, res) => {
   const { rows } = await query(
     `SELECT id, title, filename, filepath, uploaded_by, uploaded_at, version
      FROM policy_documents
@@ -38,7 +38,7 @@ router.get('/chro/institutional-values', requireAuth, async (req, res) => {
 })
 
 // ─── GET all versions ─────────────────────────────────────────────────────────
-router.get('/chro/institutional-values/history', requireAuth, async (req, res) => {
+router.get('/chro/institutional-values/history', requireAuth, requirePermission('can_view_policies'), async (req, res) => {
   const { rows } = await query(
     `SELECT id, title, filename, uploaded_at, version
      FROM policy_documents
@@ -49,7 +49,7 @@ router.get('/chro/institutional-values/history', requireAuth, async (req, res) =
 })
 
 // ─── POST upload new PDF ──────────────────────────────────────────────────────
-router.post('/chro/institutional-values', requireAuth, upload.single('document'), async (req, res) => {
+router.post('/chro/institutional-values', requireAuth, requirePermission('can_manage_policies'), upload.single('document'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded.' })
   const { title } = req.body
   if (!title) return res.status(400).json({ error: 'Title is required.' })
@@ -70,7 +70,7 @@ router.post('/chro/institutional-values', requireAuth, upload.single('document')
 })
 
 // ─── Serve / download a specific PDF ─────────────────────────────────────────
-router.get('/chro/institutional-values/:id/download', requireAuth, async (req, res) => {
+router.get('/chro/institutional-values/:id/download', requireAuth, requirePermission('can_view_policies'), async (req, res) => {
   const { rows } = await query(
     `SELECT filepath, filename FROM policy_documents WHERE id=$1 AND category='institutional_values'`,
     [req.params.id]

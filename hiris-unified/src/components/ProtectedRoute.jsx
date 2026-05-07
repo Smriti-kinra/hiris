@@ -1,11 +1,11 @@
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
-/**
- * allowedRoles: e.g. ['CHRO'] | ['Hiring Manager'] | ['Faculty']
- * If no roles specified, any logged-in user passes.
- */
-export default function ProtectedRoute({ allowedPortal }) {
+function hasPermission(user, key) {
+  return !!(user?.permissions?.[key] || user?.permissions?.is_admin)
+}
+
+export default function ProtectedRoute({ requiredPermission, requiredAny = [] }) {
   const { user, loading } = useAuth()
 
   if (loading) {
@@ -21,9 +21,12 @@ export default function ProtectedRoute({ allowedPortal }) {
 
   if (!user) return <Navigate to="/login" replace />
 
-  if (allowedPortal && user.portal !== allowedPortal) {
-    // Redirect to their correct portal
-    return <Navigate to={`/${user.portal}`} replace />
+  if (requiredPermission && !hasPermission(user, requiredPermission)) {
+    return <Navigate to={user.home_path || '/dashboard'} replace />
+  }
+
+  if (requiredAny.length > 0 && !requiredAny.some(key => hasPermission(user, key))) {
+    return <Navigate to={user.home_path || '/dashboard'} replace />
   }
 
   return <Outlet />

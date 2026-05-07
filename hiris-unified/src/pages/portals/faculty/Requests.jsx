@@ -10,6 +10,7 @@ const STATUS_BADGE = { 'Pending Review': 'badge-amber', 'Sent for Approval': 'ba
 export default function FacultyRequests() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const canRequestJobs = !!(user?.permissions?.can_request_jobs || user?.permissions?.is_admin)
   const [requests, setRequests] = useState([])
   const [loading, setLoading]   = useState(true)
   const [modal, setModal]       = useState(false)
@@ -41,10 +42,12 @@ export default function FacultyRequests() {
           <div className="page-title">Hiring Requests</div>
           <div className="page-subtitle">{meta.total || requests.length} requests submitted across departments</div>
         </div>
-        <button className="btn btn-primary" onClick={() => setModal(true)}>
-          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          New Request
-        </button>
+        {canRequestJobs && (
+          <button className="btn btn-primary" onClick={() => setModal(true)}>
+            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New Request
+          </button>
+        )}
       </div>
       <div className="card">
         {loading ? (
