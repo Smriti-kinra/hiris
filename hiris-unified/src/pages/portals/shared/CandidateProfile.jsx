@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import AppShell from '../../../components/AppShell'
-import { apiFetch } from '../../../services/api'
+import { apiFetch, assetUrl } from '../../../services/api'
 import { useAuth } from '../../../context/AuthContext'
 
 const STAGE_BADGE = {
@@ -47,7 +47,9 @@ export default function CandidateProfile() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const portal = user?.portal || 'hiring'
+  const section = (user?.home_path || '').match(/^\/([^/?#]+)/)?.[1]
+  const portal = ['hiring', 'faculty', 'chro'].includes(section) ? section : 'hiring'
+  const noteField = (user?.permissions?.can_review_jd || user?.permissions?.can_conduct_interview) ? 'faculty_notes' : 'manager_notes'
 
   const [candidate, setCandidate] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -67,19 +69,16 @@ export default function CandidateProfile() {
     .then(([candData, intData]) => {
       setCandidate(candData)
       setInterviews(intData)
-      const existingNote = portal === 'faculty' ? candData.faculty_notes : candData.manager_notes
+      const existingNote = candData[noteField]
       setNoteText(existingNote || '')
     })
     .catch(err => setError(err === 404 ? 'Candidate not found.' : 'Failed to load profile.'))
     .finally(() => setLoading(false))
-  }, [id, portal])
+  }, [id, noteField])
 
   const handleSaveNote = async () => {
     setSavingNote(true)
-    const body = portal === 'faculty'
-      ? { faculty_notes: noteText }
-      : { manager_notes: noteText }
-    await apiFetch(`/candidates/${id}/notes`, { method: 'PATCH', body: JSON.stringify(body) }).catch(() => {})
+    await apiFetch(`/candidates/${id}/notes`, { method: 'PATCH', body: JSON.stringify({ notes: noteText }) }).catch(() => {})
     setSavingNote(false)
   }
 
@@ -110,6 +109,7 @@ export default function CandidateProfile() {
   const evalScores = candidate?.eval_scores || {}
   const generatedQuestions = candidate?.generated_behavioral_questions || []
   const currentStageIdx = STAGE_FLOW.indexOf(candidate?.stage_raw || 'applied')
+  const canMoveCandidates = !!(user?.permissions?.can_move_candidates || user?.permissions?.is_admin)
 
   if (loading) return (
     <AppShell portal={portal} pageTitle="Candidate Profile">
@@ -203,13 +203,13 @@ export default function CandidateProfile() {
             <div className="card-pad">
               <div style={{ fontWeight: 700, fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 12 }}>Documents</div>
               {candidate.resume_path && (
-                <a href={`http://localhost:3001/${candidate.resume_path.startsWith('uploads') ? candidate.resume_path : `uploads/${candidate.resume_path}`}`} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: 'var(--bg-hover)', borderRadius: 8, marginBottom: 8, textDecoration: 'none', color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, border: '1px solid var(--border)' }}>
+                <a href={assetUrl(candidate.resume_path)} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: 'var(--bg-hover)', borderRadius: 8, marginBottom: 8, textDecoration: 'none', color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, border: '1px solid var(--border)' }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                   Resume
                 </a>
               )}
               {candidate.cv_path && (
-                <a href={`http://localhost:3001/${candidate.cv_path.startsWith('uploads') ? candidate.cv_path : `uploads/${candidate.cv_path}`}`} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: 'var(--bg-hover)', borderRadius: 8, textDecoration: 'none', color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, border: '1px solid var(--border)' }}>
+                <a href={assetUrl(candidate.cv_path)} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: 'var(--bg-hover)', borderRadius: 8, textDecoration: 'none', color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, border: '1px solid var(--border)' }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                   Curriculum Vitae
                 </a>
@@ -252,7 +252,7 @@ export default function CandidateProfile() {
               </div>
 
               {/* Stage Action Buttons — hiring manager only */}
-              {portal === 'hiring' && candidate.stage !== 'Hired' && candidate.stage !== 'Rejected' && (
+              {canMoveCandidates && candidate.stage !== 'Hired' && candidate.stage !== 'Rejected' && (
                 <div style={{ marginTop: 20, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {currentStageIdx < STAGE_FLOW.length - 1 && (
                     <button disabled={movingStage} onClick={() => handleMoveStage(STAGE_FLOW[currentStageIdx + 1])} className="btn btn-primary" style={{ padding: '6px 16px', fontSize: 12 }}>
@@ -448,7 +448,7 @@ export default function CandidateProfile() {
               {int.recording_path && (
                 <div style={{ marginTop: 8 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>Recording</div>
-                  <audio controls src={`/${int.recording_path}`} style={{ width: '100%' }} />
+                  <audio controls src={assetUrl(int.recording_path)} style={{ width: '100%' }} />
                 </div>
               )}
             </SectionCard>
@@ -456,7 +456,7 @@ export default function CandidateProfile() {
           })}
 
           {/* Notes */}
-          <SectionCard icon="🗒️" title={portal === 'faculty' ? 'Faculty Notes' : 'Hiring Manager Notes'}>
+          <SectionCard icon="🗒️" title="Reviewer Notes">
             <textarea
               className="hiris-input"
               rows={4}

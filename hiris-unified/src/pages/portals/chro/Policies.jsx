@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import AppShell from '../../../components/AppShell'
-import { apiFetch } from '../../../services/api'
+import { apiFetch, apiUrl } from '../../../services/api'
+import { useAuth } from '../../../context/AuthContext'
 
 const CATEGORY_COLOR = {
   Interviewing: 'badge-blue', Approvals: 'badge-amber', Offers: 'badge-green',
@@ -22,9 +23,7 @@ function UploadModal({ onClose, onUploaded }) {
     fd.append('title', title)
     fd.append('document', file)
     try {
-      const res = await fetch('/api/chro/institutional-values', {
-        method: 'POST', body: fd, credentials: 'include',
-      })
+      const res = await apiFetch('/chro/institutional-values', { method: 'POST', body: fd })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Upload failed')
       onUploaded(data)
@@ -65,6 +64,8 @@ function UploadModal({ onClose, onUploaded }) {
 }
 
 export default function CHROPolicies() {
+  const { user } = useAuth()
+  const canManagePolicies = !!(user?.permissions?.can_manage_policies || user?.permissions?.is_admin)
   const [policies, setPolicies]         = useState([])
   const [loading, setLoading]           = useState(true)
   const [active, setActive]             = useState(null)
@@ -106,9 +107,11 @@ export default function CHROPolicies() {
             <div style={{ fontWeight: 700, fontSize: 15 }}>Institutional Values</div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Upload and manage the official institutional values document</div>
           </div>
-          <button onClick={() => setShowUpload(true)} className="btn btn-primary" style={{ padding: '8px 16px', fontSize: 13 }}>
-            {ivDoc ? 'Upload New Version' : 'Upload Document'}
-          </button>
+          {canManagePolicies && (
+            <button onClick={() => setShowUpload(true)} className="btn btn-primary" style={{ padding: '8px 16px', fontSize: 13 }}>
+              {ivDoc ? 'Upload New Version' : 'Upload Document'}
+            </button>
+          )}
         </div>
         <div className="card-pad">
           {ivLoading ? (
@@ -123,7 +126,7 @@ export default function CHROPolicies() {
                     Version {ivDoc.version} · Uploaded {new Date(ivDoc.uploaded_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </div>
                 </div>
-                <a href={`/api/chro/institutional-values/${ivDoc.id}/download`} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ padding: '6px 14px', fontSize: 12 }}>
+                <a href={apiUrl(`/chro/institutional-values/${ivDoc.id}/download`)} target="_blank" rel="noreferrer" className="btn btn-outline" style={{ padding: '6px 14px', fontSize: 12 }}>
                   View / Download
                 </a>
               </div>

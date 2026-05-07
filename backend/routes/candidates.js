@@ -1,7 +1,7 @@
 const express = require('express')
 const router  = express.Router()
 const { query }       = require('../config/db')
-const { requireAuth } = require('../middleware/auth')
+const { requireAuth, requirePermission, hasPermission } = require('../middleware/auth')
 
 const STAGE_LABEL = {
   applied:              'Applied',
@@ -25,7 +25,7 @@ const stageCase = `
   END`
 
 // ─── List candidates filtered by portal/role stages ──────────────────────────
-router.get('/candidates', requireAuth, async (req, res) => {
+router.get('/candidates', requireAuth, requirePermission('can_view_candidates'), async (req, res) => {
   const { userId } = req.currentUser
 
   const { rows } = await query(`
@@ -45,14 +45,14 @@ router.get('/candidates', requireAuth, async (req, res) => {
     LEFT JOIN jobs         j ON j.id = a.job_id
     JOIN users             u ON u.id = $1
     JOIN roles             r ON u.role_id = r.id
-    WHERE a.stage = ANY(r.visible_stages)
+    WHERE a.org_id = $2 AND a.stage = ANY(r.visible_stages)
     ORDER BY a.applied_at DESC NULLS LAST
-  `, [userId])
+  `, [userId, req.currentUser.orgId])
   res.json(rows)
 })
 
 // ─── Single candidate (full profile) ─────────────────────────────────────────
-router.get('/candidates/:id', requireAuth, async (req, res) => {
+router.get('/candidates/:id', requireAuth, requirePermission('can_view_candidates'), async (req, res) => {
   const { rows } = await query(`
     SELECT
       c.id::text                   AS id,
@@ -79,8 +79,10 @@ router.get('/candidates/:id', requireAuth, async (req, res) => {
     LEFT JOIN applications a ON a.candidate_id = c.id
     LEFT JOIN jobs         j ON j.id = a.job_id
     LEFT JOIN candidate_summaries cs ON cs.application_id = a.id
-    WHERE c.id = $1
-  `, [req.params.id])
+    JOIN users             u ON u.id = $2
+    JOIN roles             r ON u.role_id = r.id
+    WHERE c.id = $1 AND a.org_id = $3 AND a.stage = ANY(r.visible_stages)
+  `, [req.params.id, req.currentUser.userId, req.currentUser.orgId])
   if (!rows[0]) return res.status(404).json({ error: 'Candidate not found.' })
   
   const candidate = rows[0]
@@ -97,7 +99,7 @@ router.get('/candidates/:id', requireAuth, async (req, res) => {
 })
 
 // ─── Candidates for a specific job (filtered by role stages) ───────────────
-router.get('/jobs/:jobId/candidates', requireAuth, async (req, res) => {
+router.get('/jobs/:jobId/candidates', requireAuth, requirePermission('can_view_candidates'), async (req, res) => {
   const { userId } = req.currentUser
   const { rows } = await query(`
     SELECT
@@ -112,34 +114,50 @@ router.get('/jobs/:jobId/candidates', requireAuth, async (req, res) => {
     JOIN candidates c ON c.id = a.candidate_id
     JOIN users u ON u.id = $2
     JOIN roles r ON u.role_id = r.id
-    WHERE a.job_id = $1 AND a.stage = ANY(r.visible_stages)
+    WHERE a.job_id = $1 AND a.org_id = $3 AND a.stage = ANY(r.visible_stages)
     ORDER BY a.applied_at DESC
-  `, [req.params.jobId, userId])
+  `, [req.params.jobId, userId, req.currentUser.orgId])
   res.json(rows)
 })
 
 // ─── Update application stage ─────────────────────────────────────────────────
-router.patch('/candidates/:id/stage', requireAuth, async (req, res) => {
+router.patch('/candidates/:id/stage', requireAuth, requirePermission('can_move_candidates'), async (req, res) => {
   const { stage } = req.body
   const valid = Object.keys(STAGE_LABEL)
   if (!valid.includes(stage)) return res.status(400).json({ error: 'Invalid stage.' })
   const { rows } = await query(
-    `UPDATE applications SET stage=$1 WHERE candidate_id=$2 RETURNING id::text, stage`,
-    [stage, req.params.id]
+    `UPDATE applications SET stage=$1 WHERE candidate_id=$2 AND org_id=$3 RETURNING id::text, stage`,
+    [stage, req.params.id, req.currentUser.orgId]
   )
   if (!rows[0]) return res.status(404).json({ error: 'Application not found.' })
   res.json(rows[0])
 })
 
 // ─── Save notes ───────────────────────────────────────────────────────────────
-router.patch('/candidates/:id/notes', requireAuth, async (req, res) => {
-  const { manager_notes, faculty_notes } = req.body
+router.patch('/candidates/:id/notes', requireAuth, requirePermission('can_update_candidate_notes'), async (req, res) => {
+  const { manager_notes, faculty_notes, notes } = req.body
+  const hasManagerNotes = Object.prototype.hasOwnProperty.call(req.body, 'manager_notes')
+  const hasFacultyNotes = Object.prototype.hasOwnProperty.call(req.body, 'faculty_notes')
+
+  if (!hasManagerNotes && !hasFacultyNotes) {
+    if (typeof notes !== 'string') return res.status(400).json({ error: 'notes is required.' })
+    const noteColumn = (hasPermission(req.currentUser, 'can_review_jd') || hasPermission(req.currentUser, 'can_conduct_interview'))
+      ? 'faculty_notes'
+      : 'manager_notes'
+    const { rows } = await query(
+      `UPDATE applications SET ${noteColumn}=$1 WHERE candidate_id=$2 AND org_id=$3 RETURNING id::text`,
+      [notes, req.params.id, req.currentUser.orgId]
+    )
+    if (!rows[0]) return res.status(404).json({ error: 'Application not found.' })
+    return res.json({ ok: true })
+  }
+
   const { rows } = await query(
     `UPDATE applications SET
        manager_notes = COALESCE($1, manager_notes),
        faculty_notes = COALESCE($2, faculty_notes)
-     WHERE candidate_id=$3 RETURNING id::text`,
-    [manager_notes ?? null, faculty_notes ?? null, req.params.id]
+     WHERE candidate_id=$3 AND org_id=$4 RETURNING id::text`,
+    [manager_notes ?? null, faculty_notes ?? null, req.params.id, req.currentUser.orgId]
   )
   if (!rows[0]) return res.status(404).json({ error: 'Application not found.' })
   res.json({ ok: true })

@@ -2,10 +2,17 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { apiFetch } from '../../../services/api'
 import AppShell from '../../../components/AppShell'
+import { useAuth } from '../../../context/AuthContext'
+
+function homeSection(user) {
+  const section = (user?.home_path || '').match(/^\/([^/?#]+)/)?.[1]
+  return ['hiring', 'faculty', 'chro'].includes(section) ? section : 'hiring'
+}
 
 export default function InterviewSummary() {
   const { sessionId } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   const [session, setSession] = useState(null)
   const [evaluations, setEvaluations] = useState([])
@@ -32,8 +39,7 @@ export default function InterviewSummary() {
     setProceeding(true)
     try {
       await apiFetch(`/interviews/${sessionId}/proceed`, { method: 'POST' })
-      const portal = session?.type === 'behavioral' ? '/chro' : '/faculty'
-      navigate(`${portal}/candidates`)
+      navigate(`/${homeSection(user)}/candidates`)
     } catch { setProceeding(false) }
   }
 
@@ -41,8 +47,7 @@ export default function InterviewSummary() {
     setProceeding(true)
     try {
       await apiFetch(`/interviews/${sessionId}/reject`, { method: 'POST' })
-      const portal = session?.type === 'behavioral' ? '/chro' : '/faculty'
-      navigate(`${portal}/candidates`)
+      navigate(`/${homeSection(user)}/candidates`)
     } catch { setProceeding(false) }
   }
 
@@ -57,7 +62,7 @@ export default function InterviewSummary() {
   const REC_COLOR = { strong_hire: '#10B981', hire: '#10B981', neutral: '#F59E0B', no_hire: '#EF4444' }
 
   return (
-    <AppShell portal={session.type === 'behavioral' ? 'chro' : 'faculty'} pageTitle="Interview Summary">
+    <AppShell portal={homeSection(user)} pageTitle="Interview Summary">
       <div style={{ maxWidth: 1040, margin: '0 auto' }}>
         <button onClick={() => navigate(-1)} className="btn btn-outline" style={{ marginBottom: 24, padding: '8px 16px', fontSize: 13 }}>
           Back to Interviews

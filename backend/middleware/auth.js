@@ -2,21 +2,59 @@ const jwt = require('jsonwebtoken')
 const { query } = require('../config/db')
 
 /**
- * Express middleware — verifies the httpOnly JWT cookie.
- * On success: attaches req.currentUser = { userId, portal, role }
- * On failure: returns 401.
+ * Express middleware — verifies the httpOnly JWT cookie and loads current
+ * role permissions from the database. The token only identifies the user;
+ * RBAC state is always read fresh so role edits take effect immediately.
  */
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
   const token = req.cookies?.hiris_token
   if (!token) return res.status(401).json({ error: 'Not authenticated.' })
 
   try {
-    req.currentUser = jwt.verify(token, process.env.JWT_SECRET)
+    const payload = jwt.verify(token, process.env.JWT_SECRET)
+    const { rows } = await query(
+      `SELECT
+         u.id AS user_id, u.name, u.email, u.role, u.portal, u.org_id, u.role_id, u.title,
+         r.name AS role_name, r.permissions, r.visible_stages, r.landing_portal, r.home_path
+       FROM users u
+       LEFT JOIN roles r ON r.id = u.role_id AND r.org_id = u.org_id
+       WHERE u.id = $1`,
+      [payload.userId]
+    )
+
+    const user = rows[0]
+    if (!user) {
+      res.clearCookie('hiris_token')
+      return res.status(401).json({ error: 'User not found.' })
+    }
+
+    req.currentUser = {
+      userId: user.user_id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      roleId: user.role_id,
+      roleName: user.role_name,
+      portal: user.portal || user.landing_portal,
+      orgId: user.org_id,
+      title: user.title,
+      permissions: user.permissions || {},
+      visibleStages: user.visible_stages || [],
+      homePath: user.home_path || `/${user.portal || user.landing_portal || 'hiring'}`,
+    }
     next()
-  } catch {
+  } catch (err) {
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('[auth] Auth check failed:', err.message)
+    }
     res.clearCookie('hiris_token')
     return res.status(401).json({ error: 'Session expired. Please log in again.' })
   }
+}
+
+function hasPermission(user, permKey) {
+  const perms = user?.permissions || {}
+  return !!(perms[permKey] || perms.is_admin)
 }
 
 /**
@@ -24,25 +62,17 @@ function requireAuth(req, res, next) {
  * MUST be used after requireAuth.
  */
 function requirePermission(permKey) {
-  return async (req, res, next) => {
-    try {
-      const { rows } = await query(
-        `SELECT r.permissions FROM users u 
-         JOIN roles r ON u.role_id = r.id 
-         WHERE u.id = $1`,
-        [req.currentUser.userId]
-      )
-      
-      const perms = rows[0]?.permissions || {}
-      if (perms[permKey] || perms['is_admin']) {
-        return next()
-      }
-      return res.status(403).json({ error: 'Access Denied: Missing permission ' + permKey })
-    } catch (err) {
-      console.error('[auth] Permission check failed:', err)
-      return res.status(500).json({ error: 'Internal server error checking permissions.' })
-    }
+  return (req, res, next) => {
+    if (hasPermission(req.currentUser, permKey)) return next()
+    return res.status(403).json({ error: 'Access denied: missing permission ' + permKey })
   }
 }
 
-module.exports = { requireAuth, requirePermission }
+function requireAnyPermission(permKeys) {
+  return (req, res, next) => {
+    if (permKeys.some(key => hasPermission(req.currentUser, key))) return next()
+    return res.status(403).json({ error: 'Access denied: missing one of ' + permKeys.join(', ') })
+  }
+}
+
+module.exports = { requireAuth, requirePermission, requireAnyPermission, hasPermission }

@@ -177,11 +177,11 @@ describe('NULL role_id — user silently gets zero permissions', () => {
     expect(res.status).toBe(403)
   })
 
-  it('can still access routes that only require auth (not permission)', async () => {
+  it('is denied from request data because list endpoints are permission-protected', async () => {
     const res = await request(app)
       .get('/api/hiring-requests')
       .set('Cookie', mintCookie(nullRoleUser))
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(403)
   })
 })
 

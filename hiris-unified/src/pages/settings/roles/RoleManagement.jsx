@@ -4,18 +4,11 @@ import { useAuth } from '../../../context/AuthContext'
 import { useToast } from '../../../context/ToastContext'
 import AppShell from '../../../components/AppShell'
 
-const PERM_KEYS = [
-  { key: 'can_request_jobs',       label: 'Request Jobs' },
-  { key: 'can_build_jd',           label: 'Build JDs' },
-  { key: 'can_review_jd',          label: 'Review JDs' },
-  { key: 'can_conduct_interview',  label: 'Conduct Interviews' },
-  { key: 'can_make_final_decision',label: 'Final Decision' },
-  { key: 'can_view_analytics',     label: 'View Analytics' },
-  { key: 'can_manage_team',        label: 'Manage Team' },
-  { key: 'can_manage_roles',       label: 'Manage Roles' },
-]
-
-const DEFAULT_ROLES = ['CHRO', 'Hiring Manager', 'Faculty']
+function emptyPermissions(permissionGroups) {
+  return Object.fromEntries(
+    permissionGroups.flatMap(group => group.permissions.map(permission => [permission.key, false]))
+  )
+}
 
 /* ── Shared modal shell ── */
 function Modal({ children, onClose }) {
@@ -32,17 +25,32 @@ function Modal({ children, onClose }) {
 }
 
 /* ── Create Role Modal ── */
-function CreateRoleModal({ onClose, onSuccess }) {
+function CreateRoleModal({ templates, permissionGroups, onClose, onSuccess }) {
   const [name, setName] = useState('')
+  const [templateKey, setTemplateKey] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr]   = useState('')
 
   async function handleCreate() {
-    if (!name.trim()) return setErr('Role name is required.')
-    if (name.trim().length > 50) return setErr('Role name must be 50 characters or fewer.')
+    const template = templates.find(t => t.key === templateKey)
+    const roleName = name.trim() || template?.name || ''
+    if (!roleName) return setErr('Role name is required.')
+    if (roleName.length > 50) return setErr('Role name must be 50 characters or fewer.')
     setBusy(true); setErr('')
     try {
-      const res  = await apiFetch('/roles', { method: 'POST', body: JSON.stringify({ name: name.trim(), permissions: {} }) })
+      const res  = await apiFetch('/roles', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: roleName,
+          description: template?.description || null,
+          permissions: template?.permissions || emptyPermissions(permissionGroups),
+          visible_stages: template?.visible_stages || [],
+          permission_groups: template?.permission_groups || [],
+          landing_portal: template?.landing_portal || 'hiring',
+          home_path: template?.home_path || null,
+          template_key: template ? `${template.key}-copy` : undefined,
+        }),
+      })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to create role')
       onSuccess(data)
@@ -62,6 +70,24 @@ function CreateRoleModal({ onClose, onSuccess }) {
         <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 22, lineHeight: 1, padding: 0 }}>×</button>
       </div>
       <div className="card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Start From Template
+          </label>
+          <select
+            style={inputStyle}
+            value={templateKey}
+            onChange={e => {
+              const key = e.target.value
+              setTemplateKey(key)
+              const template = templates.find(t => t.key === key)
+              if (template && !name.trim()) setName(`${template.name} Copy`)
+            }}
+          >
+            <option value="">Blank custom role</option>
+            {templates.map(t => <option key={t.key} value={t.key}>{t.name}</option>)}
+          </select>
+        </div>
         <div>
           <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             Role Name *
@@ -145,6 +171,7 @@ function DeleteModal({ role, onClose, onSuccess }) {
 export default function RoleManagement() {
   const { user }  = useAuth()
   const toast     = useToast()
+  const [config, setConfig]             = useState({ permission_groups: [], pipeline_stages: [], role_templates: [] })
   const [roles, setRoles]               = useState([])
   const [loading, setLoading]           = useState(true)
   const [error, setError]               = useState(null)
@@ -152,7 +179,18 @@ export default function RoleManagement() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [savingId, setSavingId]         = useState(null)
 
-  useEffect(() => { fetchRoles() }, [])
+  useEffect(() => {
+    Promise.all([
+      apiFetch('/roles/config').then(r => r.json()),
+      fetchRoles(),
+    ]).then(([cfg]) => {
+      setConfig({
+        permission_groups: cfg.permission_groups || [],
+        pipeline_stages: cfg.pipeline_stages || [],
+        role_templates: cfg.role_templates || [],
+      })
+    })
+  }, [])
 
   async function fetchRoles() {
     setLoading(true)
@@ -191,6 +229,40 @@ export default function RoleManagement() {
         throw new Error('Failed to update permission')
       }
       toast.success('Permission updated')
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  async function toggleStage(roleId, stageKey) {
+    const roleIndex = roles.findIndex(r => r.id === roleId)
+    if (roleIndex === -1) return
+
+    const role = roles[roleIndex]
+    const stages = role.visible_stages || []
+    const updatedStages = stages.includes(stageKey)
+      ? stages.filter(s => s !== stageKey)
+      : [...stages, stageKey]
+
+    setRoles(prev => {
+      const next = [...prev]
+      next[roleIndex] = { ...role, visible_stages: updatedStages }
+      return next
+    })
+    setSavingId(roleId)
+
+    try {
+      const res = await apiFetch(`/roles/${roleId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ visible_stages: updatedStages }),
+      })
+      if (!res.ok) {
+        setRoles(prev => { const next = [...prev]; next[roleIndex] = role; return next })
+        throw new Error('Failed to update visible stages')
+      }
+      toast.success('Stage visibility updated')
     } catch (err) {
       toast.error(err.message)
     } finally {
@@ -258,8 +330,8 @@ export default function RoleManagement() {
                 <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{role.name}</h3>
                 {savingId === role.id && <div className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />}
               </div>
-              {DEFAULT_ROLES.includes(role.name) ? (
-                <span className="badge badge-gray">Default Role</span>
+              {role.is_system ? (
+                <span className="badge badge-gray">Role Template</span>
               ) : (
                 <button
                   onClick={() => setDeleteTarget(role)}
@@ -270,37 +342,84 @@ export default function RoleManagement() {
               )}
             </div>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-              {PERM_KEYS.map(pk => {
-                const hasPerm = !!role.permissions[pk.key]
-                return (
-                  <label key={pk.key} style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
-                    fontSize: 12.5, fontWeight: 600,
-                    border: `1.5px solid ${hasPerm ? 'var(--accent-green)' : 'var(--border-strong)'}`,
-                    background: hasPerm ? 'var(--badge-green-bg)' : 'var(--bg-active)',
-                    color: hasPerm ? 'var(--badge-green-text)' : 'var(--text-secondary)',
-                    transition: 'all 0.15s',
-                    userSelect: 'none',
-                  }}>
-                    <input
-                      type="checkbox"
-                      checked={hasPerm}
-                      onChange={() => togglePermission(role.id, pk.key)}
-                      style={{ accentColor: 'var(--accent-green)', width: 13, height: 13 }}
-                    />
-                    {pk.label}
-                  </label>
-                )
-              })}
+            {role.description && (
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>{role.description}</div>
+            )}
+
+            <div style={{ display: 'grid', gap: 16 }}>
+              {config.permission_groups.map(group => (
+                <div key={group.key}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>
+                    {group.label}
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                    {group.permissions.map(pk => {
+                      const hasPerm = !!role.permissions?.[pk.key]
+                      return (
+                        <label key={pk.key} style={{
+                          display: 'flex', alignItems: 'center', gap: 6,
+                          padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
+                          fontSize: 12.5, fontWeight: 600,
+                          border: `1.5px solid ${hasPerm ? 'var(--accent-green)' : 'var(--border-strong)'}`,
+                          background: hasPerm ? 'var(--badge-green-bg)' : 'var(--bg-active)',
+                          color: hasPerm ? 'var(--badge-green-text)' : 'var(--text-secondary)',
+                          transition: 'all 0.15s',
+                          userSelect: 'none',
+                        }}>
+                          <input
+                            type="checkbox"
+                            checked={hasPerm}
+                            onChange={() => togglePermission(role.id, pk.key)}
+                            style={{ accentColor: 'var(--accent-green)', width: 13, height: 13 }}
+                          />
+                          {pk.label}
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>
+                  Visible Candidate Stages
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                  {config.pipeline_stages.map(stage => {
+                    const visible = role.visible_stages?.includes(stage.key)
+                    return (
+                      <label key={stage.key} style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
+                        fontSize: 12.5, fontWeight: 600,
+                        border: `1.5px solid ${visible ? 'var(--accent-blue)' : 'var(--border-strong)'}`,
+                        background: visible ? 'var(--badge-blue-bg)' : 'var(--bg-active)',
+                        color: visible ? 'var(--badge-blue-text)' : 'var(--text-secondary)',
+                      }}>
+                        <input
+                          type="checkbox"
+                          checked={!!visible}
+                          onChange={() => toggleStage(role.id, stage.key)}
+                          style={{ accentColor: 'var(--accent-blue)', width: 13, height: 13 }}
+                        />
+                        {stage.label}
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         ))}
       </div>
 
       {showCreate && (
-        <CreateRoleModal onClose={() => setShowCreate(false)} onSuccess={handleCreated} />
+        <CreateRoleModal
+          templates={config.role_templates}
+          permissionGroups={config.permission_groups}
+          onClose={() => setShowCreate(false)}
+          onSuccess={handleCreated}
+        />
       )}
       {deleteTarget && (
         <DeleteModal role={deleteTarget} onClose={() => setDeleteTarget(null)} onSuccess={handleDeleted} />

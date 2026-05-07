@@ -157,10 +157,9 @@ export default function BehavioralInterviewRoom() {
       if (audioBlob && audioBlob.size > 0) {
         const formData = new FormData()
         formData.append('audio', audioBlob, `interview_${sessionId}.webm`)
-        await fetch(`http://localhost:3001/api/interviews/${sessionId}/audio`, {
+        await apiFetch(`/interviews/${sessionId}/audio`, {
           method: 'POST',
           body: formData,
-          credentials: 'include'
         })
       }
 

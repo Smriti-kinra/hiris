@@ -1,33 +1,35 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { apiFetch } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
+import hirisLogo from '../../assets/hiris-logo.svg'
 
-/* ── Default role templates ─────────────────────────────────────────────────── */
-const DEFAULT_ROLES = [
-  {
-    key: 'chro', label: 'CHRO / HR Head', color: '#28666E',
-    desc: 'Manages the overall hiring strategy, conducts final interviews, and approves all offers.',
-    perms: { can_request_jobs: false, can_build_jd: false, can_review_jd: true, can_conduct_interview: true, can_make_final_decision: true },
-  },
-  {
-    key: 'hiring-manager', label: 'Hiring Manager', color: 'var(--text-primary)',
-    desc: 'Prepares job descriptions, manages the application portal, and shortlists candidates.',
-    perms: { can_request_jobs: false, can_build_jd: true, can_review_jd: false, can_conduct_interview: false, can_make_final_decision: false },
-  },
-  {
-    key: 'department-leader', label: 'Department Leader / Professor', color: 'var(--text-secondary)',
-    desc: 'Submits hiring requests, reviews JDs, conducts technical interviews.',
-    perms: { can_request_jobs: true, can_build_jd: false, can_review_jd: true, can_conduct_interview: true, can_make_final_decision: false },
-  },
-]
+function slugify(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
 
-const PERM_LABELS = {
-  can_request_jobs:       'Request Jobs',
-  can_build_jd:           'Build JDs',
-  can_review_jd:          'Review JDs',
-  can_conduct_interview:  'Conduct Interviews',
-  can_make_final_decision:'Final Decision',
+function emptyPermissions(permissionGroups) {
+  return Object.fromEntries(
+    permissionGroups.flatMap(group => group.permissions.map(permission => [permission.key, false]))
+  )
+}
+
+function templateToRole(template, permissionGroups) {
+  return {
+    key: template.key,
+    label: template.name,
+    desc: template.description,
+    perms: template.permissions || emptyPermissions(permissionGroups),
+    visible_stages: template.visible_stages || [],
+    permission_groups: template.permission_groups || [],
+    landing_portal: template.landing_portal || 'hiring',
+    home_path: template.home_path || null,
+    is_system: true,
+  }
 }
 
 const ORG_SIZES = ['1–50', '51–200', '201–500', '500+']
@@ -48,23 +50,57 @@ export default function OrgSignup() {
   const [step, setStep] = useState(1)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [config, setConfig] = useState({ permission_groups: [], pipeline_stages: [], role_templates: [] })
 
   // Step 1
   const [org, setOrg] = useState({ name: '', website: '', industry: 'Higher Education', size: '51–200' })
 
   // Step 2
-  const [roles, setRoles] = useState(DEFAULT_ROLES)
+  const [roles, setRoles] = useState([])
 
   // Step 3
-  const [invites, setInvites] = useState([
-    { roleKey: 'chro', email: '', name: '', password: '' },
-    { roleKey: 'hiring-manager', email: '', name: '', password: 'changeme123' },
-    { roleKey: 'department-leader', email: '', name: '', password: 'changeme123' },
-  ])
+  const [invites, setInvites] = useState([])
 
-  const addInvite = () => setInvites(i => [...i, { roleKey: roles[0].key, email: '', name: '' }])
+  useEffect(() => {
+    apiFetch('/roles/config')
+      .then(r => r.json())
+      .then(cfg => {
+        const nextConfig = {
+          permission_groups: cfg.permission_groups || [],
+          pipeline_stages: cfg.pipeline_stages || [],
+          role_templates: cfg.role_templates || [],
+        }
+        const nextRoles = nextConfig.role_templates.map(t => templateToRole(t, nextConfig.permission_groups))
+        setConfig(nextConfig)
+        setRoles(nextRoles)
+        setInvites(nextRoles.slice(0, 3).map((role, index) => ({
+          roleKey: role.key,
+          email: '',
+          name: '',
+          password: index === 0 ? '' : 'changeme123',
+        })))
+      })
+      .catch(() => setError('Failed to load role templates. Please refresh and try again.'))
+  }, [])
+
+  const addInvite = () => setInvites(i => [...i, { roleKey: roles[0]?.key || '', email: '', name: '', password: 'changeme123' }])
   const removeInvite = idx => setInvites(i => i.filter((_, j) => j !== idx))
   const updateInvite = (idx, field, val) => setInvites(i => i.map((inv, j) => j === idx ? { ...inv, [field]: val } : inv))
+  const updateRole = (idx, updater) => setRoles(prev => prev.map((role, j) => j === idx ? updater(role) : role))
+  const addCustomRole = () => {
+    const name = `Custom Role ${roles.filter(r => !r.is_system).length + 1}`
+    setRoles(prev => [...prev, {
+      key: `${slugify(name)}-${Date.now()}`,
+      label: name,
+      desc: 'Custom organisation-defined role.',
+      perms: emptyPermissions(config.permission_groups),
+      visible_stages: [],
+      permission_groups: [],
+      landing_portal: 'hiring',
+      home_path: null,
+      is_system: false,
+    }])
+  }
 
   async function handleLaunch() {
     setError('')
@@ -73,12 +109,13 @@ export default function OrgSignup() {
     const users = invites
       .filter(i => i.email.trim() && i.password.trim())
       .map(i => {
-        const portal = i.roleKey === 'chro' ? 'chro' : i.roleKey === 'hiring-manager' ? 'hiring' : 'faculty'
+        const role = roles.find(r => r.key === i.roleKey)
         return {
           email: i.email.trim().toLowerCase(),
           name: i.name.trim() || i.email.split('@')[0],
-          role: i.roleKey === 'hiring-manager' ? 'hiring_manager' : i.roleKey === 'department-leader' ? 'faculty' : 'chro',
-          portal,
+          role: i.roleKey,
+          role_key: i.roleKey,
+          portal: role?.landing_portal || 'hiring',
           password: i.password
         }
       })
@@ -94,7 +131,18 @@ export default function OrgSignup() {
         method: 'POST',
         body: JSON.stringify({
           org,
-          roles,
+          roles: roles.map(role => ({
+            key: role.key,
+            label: role.label,
+            desc: role.desc,
+            permissions: role.perms,
+            perms: role.perms,
+            visible_stages: role.visible_stages,
+            permission_groups: role.permission_groups,
+            landing_portal: role.landing_portal,
+            home_path: role.home_path,
+            is_system: role.is_system,
+          })),
           users,
           // Include registration secret when configured (required in production)
           ...(import.meta.env.VITE_REGISTRATION_SECRET
@@ -108,7 +156,7 @@ export default function OrgSignup() {
 
       // Login automatically as the created admin
       setUser(data.user)
-      navigate(`/${data.user.portal}`)
+      navigate(data.user.home_path || `/${data.user.portal}`)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -122,9 +170,8 @@ export default function OrgSignup() {
     <div style={{ minHeight: '100vh', background: 'var(--slate-50)', fontFamily: 'var(--font-body)' }}>
       {/* Simple Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 32, height: 32, background: 'var(--brand)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 14 }}>H</div>
-          <div style={{ fontWeight: 700, fontSize: 16 }}>HIRIS</div>
+        <div className="onboarding-logo-wrap">
+          <img className="onboarding-logo-img" src={hirisLogo} alt="HIRIS" />
         </div>
         <Link to="/login" style={{ fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none', fontWeight: 600 }}>Already have an account? Login</Link>
       </div>
@@ -187,22 +234,75 @@ export default function OrgSignup() {
                       <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--teal-10)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--teal)' }}>badge</span>
                       </div>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--navy)' }}>{role.label}</div>
-                        <div style={{ fontSize: 12, color: 'var(--slate-500)', marginTop: 2 }}>{role.desc}</div>
+                      <div style={{ flex: 1 }}>
+                        <input
+                          style={{ ...inputStyle, fontWeight: 700, fontSize: 14, color: 'var(--navy)', marginBottom: 8 }}
+                          value={role.label}
+                          onChange={e => updateRole(ri, r => ({ ...r, label: e.target.value, key: r.is_system ? r.key : slugify(e.target.value) || r.key }))}
+                        />
+                        <input
+                          style={inputStyle}
+                          value={role.desc}
+                          onChange={e => updateRole(ri, r => ({ ...r, desc: e.target.value }))}
+                          placeholder="Describe this role"
+                        />
                       </div>
                     </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                      {Object.entries(role.perms).map(([key, val]) => (
-                        <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 6, border: `1px solid ${val ? 'rgba(40,102,110,0.3)' : 'var(--border)'}`, background: val ? 'var(--teal-10)' : 'var(--slate-50)', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: val ? 'var(--teal)' : 'var(--slate-500)' }}>
-                          <input type="checkbox" checked={val} onChange={e => setRoles(prev => prev.map((r, j) => j === ri ? { ...r, perms: { ...r.perms, [key]: e.target.checked } } : r))} style={{ accentColor: 'var(--teal)', width: 12, height: 12 }} />
-                          {PERM_LABELS[key]}
-                        </label>
+                    <div style={{ display: 'grid', gap: 12 }}>
+                      {config.permission_groups.map(group => (
+                        <div key={group.key}>
+                          <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--slate-500)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>{group.label}</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                            {group.permissions.map(permission => {
+                              const val = !!role.perms[permission.key]
+                              return (
+                                <label key={permission.key} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 6, border: `1px solid ${val ? 'rgba(40,102,110,0.3)' : 'var(--border)'}`, background: val ? 'var(--teal-10)' : 'var(--slate-50)', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: val ? 'var(--teal)' : 'var(--slate-500)' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={val}
+                                    onChange={e => updateRole(ri, r => ({ ...r, perms: { ...r.perms, [permission.key]: e.target.checked } }))}
+                                    style={{ accentColor: 'var(--teal)', width: 12, height: 12 }}
+                                  />
+                                  {permission.label}
+                                </label>
+                              )
+                            })}
+                          </div>
+                        </div>
                       ))}
+
+                      <div>
+                        <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--slate-500)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Visible Candidate Stages</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                          {config.pipeline_stages.map(stage => {
+                            const val = role.visible_stages.includes(stage.key)
+                            return (
+                              <label key={stage.key} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 6, border: `1px solid ${val ? 'rgba(59,130,246,0.35)' : 'var(--border)'}`, background: val ? 'rgba(59,130,246,0.1)' : 'var(--slate-50)', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: val ? '#2563EB' : 'var(--slate-500)' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={val}
+                                  onChange={e => updateRole(ri, r => ({
+                                    ...r,
+                                    visible_stages: e.target.checked
+                                      ? [...r.visible_stages, stage.key]
+                                      : r.visible_stages.filter(s => s !== stage.key),
+                                  }))}
+                                  style={{ accentColor: '#2563EB', width: 12, height: 12 }}
+                                />
+                                {stage.label}
+                              </label>
+                            )
+                          })}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
+              <button onClick={addCustomRole} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: '1px dashed var(--brand)', background: 'transparent', color: 'var(--brand)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add Custom Role
+              </button>
               <NavButtons onBack={() => setStep(1)} onNext={() => setStep(3)} />
             </StepCard>
           )}

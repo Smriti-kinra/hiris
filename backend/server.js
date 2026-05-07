@@ -48,12 +48,26 @@ app.use(Sentry.Handlers.requestHandler())
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }))
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'))
 
+function isAllowedCorsOrigin(origin) {
+  if (!origin) return true
+
+  const configuredOrigins = (process.env.FRONTEND_URL || '')
+    .split(',')
+    .map(value => value.trim())
+    .filter(Boolean)
+
+  if (configuredOrigins.includes(origin)) return true
+
+  if (process.env.NODE_ENV !== 'production') {
+    return /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+  }
+
+  return false
+}
+
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true)
-    const allowedOrigin = process.env.FRONTEND_URL
-    if (allowedOrigin && origin === allowedOrigin) return cb(null, true)
-    if (process.env.NODE_ENV !== 'production' && /^http:\/\/localhost(:\d+)?$/.test(origin)) return cb(null, true)
+    if (isAllowedCorsOrigin(origin)) return cb(null, true)
     const error = new Error('Not allowed by CORS'); error.status = 403; cb(error)
   },
   credentials: true,
@@ -72,7 +86,14 @@ app.use('/uploads', express.static('uploads'))
 const PORT = process.env.PORT || 3001
 app.get('/', (_, res) => res.send(`<html><body style="font-family:sans-serif;background:#0F172A;color:white;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center"><h1>HIRIS API</h1><p>Running on port ${PORT}</p><a href="/api-docs" style="color:#10B981">API Docs</a></div></body></html>`))
 
-const swaggerSpec = swaggerJsdoc({ swaggerDefinition: { openapi:'3.0.0', info:{ title:'HIRIS API', version:'1.0.0' }, servers:[{ url:'http://localhost:3001' }] }, apis:['./routes/*.js'] })
+const swaggerSpec = swaggerJsdoc({
+  swaggerDefinition: {
+    openapi: '3.0.0',
+    info: { title: 'HIRIS API', version: '1.0.0' },
+    servers: [{ url: process.env.PUBLIC_API_URL || `http://localhost:${PORT}` }],
+  },
+  apis: ['./routes/*.js'],
+})
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
 
 app.use('/api/auth',  require('./routes/auth'))

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import hirisLogo from '../assets/hiris-logo.svg'
 
 /* ── Icon helpers (inline SVGs, no dep needed) ── */
 const Icon = ({ d, size = 16 }) => (
@@ -27,39 +28,41 @@ const icons = {
   team:       'M12 4.5C12 6.43 10.43 8 8.5 8S5 6.43 5 4.5 6.57 1 8.5 1 12 2.57 12 4.5z M16 8a2.5 2.5 0 100-5 2.5 2.5 0 000 5z M0 18v-1.5C0 14.57 1.79 13 4 13h9c2.21 0 4 1.57 4 3.5V18 M19 13c2.21 0 4 1.57 4 3.5V18',
 }
 
-/* ── Portal-specific nav configs ── */
-const navConfigs = {
-  hiring: [
-    { label: 'Overview', to: '/hiring', icon: 'home', end: true },
-    { label: 'Hiring Requests', to: '/hiring/requests', icon: 'briefcase' },
-    { label: 'Job Postings', to: '/hiring/jobs', icon: 'file' },
-    { label: 'Posted Jobs', to: '/hiring/posted-jobs', icon: 'briefcase' },
-    { label: 'Candidates', to: '/hiring/candidates', icon: 'users' },
-    { label: 'Schedule', to: '/hiring/schedule', icon: 'calendar' },
-  ],
-  faculty: [
-    { label: 'Overview', to: '/faculty', icon: 'home', end: true },
-    { label: 'My Requests', to: '/faculty/requests', icon: 'briefcase' },
-    { label: 'JD Reviews', to: '/faculty/jd-reviews', icon: 'file' },
-    { label: 'Candidates', to: '/faculty/candidates', icon: 'users' },
-    { label: 'Interviews', to: '/faculty/interviews', icon: 'calendar' },
-  ],
-  chro: [
-    { label: 'Overview', to: '/chro', icon: 'home', end: true },
-    { label: 'Hiring Overview', to: '/chro/overview', icon: 'chart' },
-    { label: 'Policies', to: '/chro/policies', icon: 'policy' },
-    { label: 'Candidates', to: '/chro/candidates', icon: 'users' },
-    { label: 'Team', to: '/chro/team', icon: 'team' },
-    { label: 'Analytics', to: '/chro/analytics', icon: 'star' },
-    { label: 'Final Interviews', to: '/chro/interviews', icon: 'calendar' },
-    { label: 'Role Management', to: '/settings/roles', icon: 'settings' },
-  ],
+function hasPerm(user, key) {
+  return !!(user?.permissions?.[key] || user?.permissions?.is_admin)
 }
 
-const portalLabels = {
-  hiring: { label: 'Hiring Manager', color: '#3B82F6' },
-  faculty: { label: 'Faculty', color: '#8B5CF6' },
-  chro: { label: 'CHRO', color: '#10B981' },
+function hasAnyPerm(user, keys) {
+  return keys.some(key => hasPerm(user, key))
+}
+
+function homeSection(user) {
+  const section = (user?.home_path || '').match(/^\/([^/?#]+)/)?.[1]
+  return ['hiring', 'faculty', 'chro'].includes(section) ? section : 'hiring'
+}
+
+function sectionPath(section, path) {
+  return `/${section}${path}`
+}
+
+function buildNav(user) {
+  const section = homeSection(user)
+  const requestPath = section === 'faculty' ? '/faculty/requests' : '/hiring/requests'
+  const candidatesPath = sectionPath(section, '/candidates')
+  const interviewsPath = section === 'hiring' ? '/hiring/schedule' : sectionPath(section, '/interviews')
+
+  return [
+    { label: 'Overview', to: user?.home_path || '/dashboard', icon: 'home', end: true, show: true },
+    { label: 'Hiring Requests', to: requestPath, icon: 'briefcase', show: hasPerm(user, 'can_view_requests') },
+    { label: 'Job Postings', to: '/hiring/jobs', icon: 'file', show: hasAnyPerm(user, ['can_view_jobs', 'can_build_jd', 'can_review_jd']) },
+    { label: 'Posted Jobs', to: '/hiring/posted-jobs', icon: 'briefcase', show: hasPerm(user, 'can_view_jobs') },
+    { label: 'Candidates', to: candidatesPath, icon: 'users', show: hasPerm(user, 'can_view_candidates') },
+    { label: 'Interviews', to: interviewsPath, icon: 'calendar', show: hasAnyPerm(user, ['can_view_interviews', 'can_conduct_interview']) },
+    { label: 'Policies', to: '/chro/policies', icon: 'policy', show: hasPerm(user, 'can_view_policies') },
+    { label: 'Team', to: '/chro/team', icon: 'team', show: hasPerm(user, 'can_manage_team') },
+    { label: 'Analytics', to: '/chro/analytics', icon: 'star', show: hasPerm(user, 'can_view_analytics') },
+    { label: 'Role Management', to: '/settings/roles', icon: 'settings', show: hasPerm(user, 'can_manage_roles') },
+  ].filter(item => item.show)
 }
 
 function SunIcon() {
@@ -91,8 +94,7 @@ export default function AppShell({ portal, pageTitle, children }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { user, logout, theme, toggleTheme } = useAuth()
   const navigate = useNavigate()
-  const nav = navConfigs[portal] || []
-  const pl = portalLabels[portal] || {}
+  const nav = buildNav(user)
 
   const initials = user?.name
     ? user.name.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase()
@@ -117,11 +119,7 @@ export default function AppShell({ portal, pageTitle, children }) {
       {/* ── Sidebar ── */}
       <aside className={`sidebar ${mobileMenuOpen ? 'open' : ''}`}>
         <div className="sidebar-logo">
-          <div className="sidebar-logo-mark">H</div>
-          <div>
-            <div className="sidebar-logo-text">HIRIS</div>
-            <div className="sidebar-logo-sub">{pl.label}</div>
-          </div>
+          <img className="sidebar-logo-img" src={hirisLogo} alt="HIRIS" />
           <button 
             className="mobile-close-btn" 
             onClick={() => setMobileMenuOpen(false)}
@@ -132,7 +130,6 @@ export default function AppShell({ portal, pageTitle, children }) {
         </div>
 
         <nav className="sidebar-section">
-          <div className="sidebar-label">Navigation</div>
           {nav.map(item => (
             <NavLink
               key={item.to}
