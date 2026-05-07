@@ -30,8 +30,18 @@ export default function JobPostingBuilder() {
   const [isAddingQuestion, setIsAddingQuestion] = useState(false)
   const [newQuestion, setNewQuestion] = useState('')
   const [draggedIdx, setDraggedIdx] = useState(null)
+  const [requirements, setRequirements] = useState({
+    name: true,
+    email: true,
+    resume: true,
+    cv: false,
+    linkedin: false,
+    github: false
+  })
   
   const [facultyComment, setFacultyComment] = useState('')
+  const [submitError, setSubmitError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
   
   const summaryRef = useRef(null)
   const respRef = useRef(null)
@@ -62,6 +72,7 @@ export default function JobPostingBuilder() {
             
             if (summaryRef.current && jd.summary) summaryRef.current.innerHTML = jd.summary
             if (respRef.current && jd.responsibilities) respRef.current.innerHTML = jd.responsibilities
+            if (jd.requirements) setRequirements(jd.requirements)
           } else {
             if (data.location) setLocation(data.location)
           }
@@ -83,37 +94,58 @@ export default function JobPostingBuilder() {
   const handleDrop = () => setDraggedIdx(null)
 
   const handleSendApproval = async () => {
+    if (!requestId) return
+    setSubmitError('')
+    setSubmitting(true)
     try {
-      if (requestId) {
-        const jd_json = {
-          title,
-          department,
-          location,
-          skills,
-          questions,
-          stages,
-          summary: summaryRef.current?.innerHTML || '',
-          responsibilities: respRef.current?.innerHTML || ''
-        }
-        await apiFetch(`/hiring-requests/${requestId}/status`, {
-          method: 'PATCH',
-          body: JSON.stringify({ action: 'submit_jd', jd_json })
-        })
+      const jd_json = {
+        title,
+        department,
+        location,
+        skills,
+        questions,
+        stages,
+        summary: summaryRef.current?.innerHTML || '',
+        responsibilities: respRef.current?.innerHTML || '',
+        requirements
+      }
+      const res = await apiFetch(`/hiring-requests/${requestId}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ action: 'submit_jd', jd_json })
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setSubmitError(data?.error || 'Failed to send for review. Please try again.')
+        return
       }
       navigate('/hiring/requests')
-    } catch(err) { console.error(err) }
+    } catch(err) {
+      setSubmitError(err.message || 'Network error. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleFacultyApprove = async () => {
+    if (!requestId) return
+    setSubmitError('')
+    setSubmitting(true)
     try {
-      if (requestId) {
-        await apiFetch(`/hiring-requests/${requestId}/status`, {
-          method: 'PATCH',
-          body: JSON.stringify({ action: 'approve', notes: facultyComment })
-        })
+      const res = await apiFetch(`/hiring-requests/${requestId}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ action: 'approve', notes: facultyComment })
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setSubmitError(data?.error || 'Failed to approve. Please try again.')
+        return
       }
       navigate(user?.home_path || '/dashboard')
-    } catch(err) { console.error(err) }
+    } catch(err) {
+      setSubmitError(err.message || 'Network error. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleDepartmentChange = (e) => {
@@ -195,7 +227,7 @@ export default function JobPostingBuilder() {
             </div>
             <div style={{ flex: '1 1 200px' }}>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '4px' }}>Start Date</div>
-              <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Sept 1, 2026</div>
+              <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{requestData?.start_date || '—'}</div>
             </div>
             <div style={{ flex: '1 1 200px' }}>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '4px' }}>Deadline</div>
@@ -258,20 +290,40 @@ export default function JobPostingBuilder() {
               )}
               {!readOnly && (
                 <div style={{ display: 'flex', gap: '4px', marginBottom: '8px', padding: '6px', background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: '8px', width: 'fit-content' }}>
-                  <button type="button" onClick={() => document.execCommand('bold')} className="btn-ghost" style={{ padding: '4px 8px', minWidth: 'unset' }}><b>B</b></button>
-                  <button type="button" onClick={() => document.execCommand('italic')} className="btn-ghost" style={{ padding: '4px 8px', minWidth: 'unset' }}><i>I</i></button>
+                  <button type="button" title="Bold" onMouseDown={e => { e.preventDefault(); summaryRef.current?.focus(); document.execCommand('bold') }} className="btn-ghost" style={{ padding: '4px 8px', minWidth: 'unset', fontWeight: 700 }}>B</button>
+                  <button type="button" title="Italic" onMouseDown={e => { e.preventDefault(); summaryRef.current?.focus(); document.execCommand('italic') }} className="btn-ghost" style={{ padding: '4px 8px', minWidth: 'unset', fontStyle: 'italic' }}>I</button>
+                  <div style={{ width: 1, background: 'var(--border)', margin: '0 4px' }} />
+                  <button type="button" title="Bullet list" onMouseDown={e => { e.preventDefault(); summaryRef.current?.focus(); document.execCommand('insertUnorderedList') }} className="btn-ghost" style={{ padding: '4px 8px', minWidth: 'unset' }}>• List</button>
                 </div>
               )}
-              <div ref={summaryRef} contentEditable={!readOnly} suppressContentEditableWarning className="hiris-input" style={{ minHeight: '100px', padding: '16px', background: readOnly ? 'var(--bg-hover)' : 'var(--bg-input)' }}>
-                {!requestData?.jd_json && "Brief overview of the role..."}
-              </div>
+              <div
+                ref={summaryRef}
+                contentEditable={!readOnly}
+                suppressContentEditableWarning
+                className="hiris-input rich-editor"
+                data-placeholder="Brief overview of the role..."
+                style={{ minHeight: '100px', padding: '16px', background: readOnly ? 'var(--bg-hover)' : 'var(--bg-input)' }}
+              />
             </div>
 
             <div>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px' }}>Responsibilities</label>
-              <div ref={respRef} contentEditable={!readOnly} suppressContentEditableWarning className="hiris-input" style={{ minHeight: '120px', padding: '16px', background: readOnly ? 'var(--bg-hover)' : 'var(--bg-input)' }}>
-                {!requestData?.jd_json && "List key duties..."}
-              </div>
+              {!readOnly && (
+                <div style={{ display: 'flex', gap: '4px', marginBottom: '8px', padding: '6px', background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: '8px', width: 'fit-content' }}>
+                  <button type="button" title="Bold" onMouseDown={e => { e.preventDefault(); respRef.current?.focus(); document.execCommand('bold') }} className="btn-ghost" style={{ padding: '4px 8px', minWidth: 'unset', fontWeight: 700 }}>B</button>
+                  <button type="button" title="Italic" onMouseDown={e => { e.preventDefault(); respRef.current?.focus(); document.execCommand('italic') }} className="btn-ghost" style={{ padding: '4px 8px', minWidth: 'unset', fontStyle: 'italic' }}>I</button>
+                  <div style={{ width: 1, background: 'var(--border)', margin: '0 4px' }} />
+                  <button type="button" title="Bullet list" onMouseDown={e => { e.preventDefault(); respRef.current?.focus(); document.execCommand('insertUnorderedList') }} className="btn-ghost" style={{ padding: '4px 8px', minWidth: 'unset' }}>• List</button>
+                </div>
+              )}
+              <div
+                ref={respRef}
+                contentEditable={!readOnly}
+                suppressContentEditableWarning
+                className="hiris-input rich-editor"
+                data-placeholder="List key duties and responsibilities..."
+                style={{ minHeight: '120px', padding: '16px', background: readOnly ? 'var(--bg-hover)' : 'var(--bg-input)' }}
+              />
             </div>
 
             <div>
@@ -311,10 +363,23 @@ export default function JobPostingBuilder() {
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '16px' }}>Basic Requirements</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {['Full Name', 'Email Address', 'Upload Resume (PDF)', 'LinkedIn Profile URL', 'GitHub Profile URL'].map((req, i) => (
-                    <label key={req} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: '12px', cursor: readOnly ? 'default' : 'pointer' }}>
-                      <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{req}</span>
-                      <input type="checkbox" disabled={readOnly || i < 2} defaultChecked={i < 3} style={{ width: '18px', height: '18px', accentColor: 'var(--brand)' }} />
+                  {[
+                    { id: 'name', label: 'Full Name', always: true },
+                    { id: 'email', label: 'Email Address', always: true },
+                    { id: 'resume', label: 'Upload Resume (PDF)' },
+                    { id: 'cv', label: 'Upload CV (PDF)' },
+                    { id: 'linkedin', label: 'LinkedIn Profile URL' },
+                    { id: 'github', label: 'GitHub Profile URL' }
+                  ].map((req) => (
+                    <label key={req.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: '12px', cursor: readOnly || req.always ? 'default' : 'pointer' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{req.label}</span>
+                      <input 
+                        type="checkbox" 
+                        disabled={readOnly || req.always} 
+                        checked={requirements[req.id]} 
+                        onChange={e => !req.always && setRequirements({ ...requirements, [req.id]: e.target.checked })}
+                        style={{ width: '18px', height: '18px', accentColor: 'var(--brand)' }} 
+                      />
                     </label>
                   ))}
                 </div>
@@ -406,30 +471,44 @@ export default function JobPostingBuilder() {
                   style={{ resize: 'vertical' }}
                 />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <button onClick={handleFacultyApprove} className="btn-primary" style={{ padding: '12px 24px', fontSize: '15px' }}>
-                  <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  Approve Job Posting
-                </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {submitError && (
+                  <div style={{ padding: '10px 14px', borderRadius: 8, background: 'var(--badge-red-bg)', color: 'var(--badge-red-text)', fontSize: 13 }}>
+                    {submitError}
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <button onClick={handleFacultyApprove} disabled={submitting} className="btn-primary" style={{ padding: '12px 24px', fontSize: '15px', opacity: submitting ? 0.7 : 1 }}>
+                    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    {submitting ? 'Approving…' : 'Approve Job Posting'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         ) : !readOnly && (
           <div className="card" style={{ background: 'var(--bg-hover)', border: '1px solid var(--border-strong)' }}>
-            <div className="card-pad" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'var(--badge-green-bg)', color: 'var(--accent-green)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            <div className="card-pad" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'var(--badge-green-bg)', color: 'var(--accent-green)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)' }}>Submit for Review</div>
+                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>Send the prepared JD to the configured reviewer for sign-off.</div>
+                  </div>
                 </div>
-                <div>
-                  <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)' }}>Submit for Review</div>
-                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>Send the prepared JD to the configured reviewer for sign-off.</div>
-                </div>
+                <button onClick={handleSendApproval} disabled={submitting} className="btn-primary" style={{ padding: '12px 24px', fontSize: '15px', opacity: submitting ? 0.7 : 1 }}>
+                  <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                  {submitting ? 'Sending…' : 'Send to Professor'}
+                </button>
               </div>
-              <button onClick={handleSendApproval} className="btn-primary" style={{ padding: '12px 24px', fontSize: '15px' }}>
-                <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                Send to Professor
-              </button>
+              {submitError && (
+                <div style={{ padding: '10px 14px', borderRadius: 8, background: 'var(--badge-red-bg)', color: 'var(--badge-red-text)', fontSize: 13 }}>
+                  {submitError}
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -14,12 +14,17 @@ export default function FacultyJDReviews() {
 
   useEffect(() => {
     if (!user) return
-    apiFetch('/hiring-requests').then(r => r.json())
+    setLoading(true)
+    apiFetch('/hiring-requests')
+      .then(r => r.json())
       .then(d => {
         const list = Array.isArray(d) ? d : (d.data || [])
-        setRequests(list.filter(r => r.status === 'Sent for Approval' && r.requested_by_id === user.id))
+        // Show all requests that are in 'Sent for Approval' (under_review) status.
+        // The backend already scopes the list to the current user's org and their own requests.
+        setRequests(list.filter(r => r.status === 'Sent for Approval'))
       })
-      .catch(() => setRequests([])).finally(() => setLoading(false))
+      .catch(() => setRequests([]))
+      .finally(() => setLoading(false))
   }, [user])
 
   return (

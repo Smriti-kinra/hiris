@@ -14,6 +14,7 @@ export default function FacultyDashboard() {
   const { user } = useAuth()
   const canRequestJobs = !!(user?.permissions?.can_request_jobs || user?.permissions?.is_admin)
   const [requests, setRequests]       = useState([])
+  const [totalRequests, setTotalRequests] = useState(0)
   const [openings, setOpenings]       = useState([])
   const [facultyStats, setFacultyStats] = useState(null)
   const [loading, setLoading]         = useState(true)
@@ -25,13 +26,16 @@ export default function FacultyDashboard() {
       apiFetch('/active-openings').then(r => r.json()).catch(() => []),
       apiFetch('/faculty/stats').then(r => r.json()).catch(() => null),
     ]).then(([req, op, fs]) => {
-      setRequests(Array.isArray(req) ? req.slice(0, 4) : [])
+      const allReqs = Array.isArray(req) ? req : []
+      setTotalRequests(allReqs.length)
+      setRequests(allReqs.slice(0, 4))
       setOpenings(Array.isArray(op) ? op.slice(0, 4) : [])
       setFacultyStats(fs)
     }).finally(() => setLoading(false))
   }, [])
 
   function handleNewRequest(req) {
+    setTotalRequests(prev => prev + 1)
     setRequests(prev => [req, ...prev].slice(0, 4))
     setModal(false)
   }
@@ -64,7 +68,7 @@ export default function FacultyDashboard() {
           <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: 28 }}>
             <div className="stat-card">
               <div className="stat-label">My Requests</div>
-              <div className="stat-value" style={{ color: 'var(--accent-purple)' }}>{requests.length}</div>
+              <div className="stat-value" style={{ color: 'var(--accent-purple)' }}>{totalRequests}</div>
             </div>
             <div className="stat-card">
               <div className="stat-label">JDs Pending Review</div>

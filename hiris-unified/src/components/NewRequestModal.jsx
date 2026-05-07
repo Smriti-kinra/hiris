@@ -6,7 +6,7 @@ const JOB_TYPES   = ['Full-time', 'Part-time', 'Contract']
 const URGENCIES   = ['low', 'medium', 'high', 'urgent']
 
 export default function NewRequestModal({ onClose, onSuccess }) {
-  const [form, setForm] = useState({ title: '', department: '', job_type: 'Full-time', headcount: 1, urgency: 'medium', deadline: '', notes: '' })
+  const [form, setForm] = useState({ title: '', department: '', job_type: 'Full-time', headcount: 1, urgency: 'medium', deadline: '', start_date: '', notes: '' })
   const [error, setError] = useState('')
   const [busy, setBusy]   = useState(false)
 
@@ -75,6 +75,12 @@ export default function NewRequestModal({ onClose, onSuccess }) {
               <div>
                 <label style={labelStyle}>Deadline</label>
                 <input style={inputStyle} type="date" value={form.deadline} onChange={e => set('deadline', e.target.value)} />
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+              <div>
+                <label style={labelStyle}>Start Date</label>
+                <input style={inputStyle} type="date" value={form.start_date} onChange={e => set('start_date', e.target.value)} />
               </div>
             </div>
             <div style={fieldStyle}>

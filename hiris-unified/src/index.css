@@ -781,3 +781,47 @@ h3 {
   from { opacity: 0; transform: translateY(12px) scale(0.97); }
   to   { opacity: 1; transform: translateY(0)  scale(1); }
 }
+
+/* ─── Rich text editor (contentEditable) placeholder ────────────────── */
+.rich-editor:empty:before,
+.rich-editor:has(> br:only-child):before {
+  content: attr(data-placeholder);
+  color: var(--text-muted);
+  pointer-events: none;
+  display: block;
+}
+.rich-editor:focus { outline: none; }
+.rich-editor ul { padding-left: 20px; list-style: disc; }
+.rich-editor ol { padding-left: 20px; list-style: decimal; }
+.rich-editor li { margin-bottom: 4px; }
+
+/* ─── File input styling ─────────────────────────────────────── */
+.file-input-wrapper {
+  position: relative;
+  border: 2px dashed var(--border-strong);
+  border-radius: 9px;
+  padding: 12px 14px;
+  background: var(--bg-input);
+  transition: border-color 0.15s, background 0.15s;
+  cursor: pointer;
+}
+.file-input-wrapper:hover {
+  border-color: var(--brand);
+  background: var(--brand-light);
+}
+.file-input-wrapper input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+.file-input-wrapper::after {
+  content: 'Click to upload PDF';
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  pointer-events: none;
+}

@@ -65,11 +65,14 @@ export default function CandidateJobPortal() {
   }
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!form.name.trim() || !form.email.trim() || !resumeFile || !cvFile) {
-      setError('Please fill in required fields and upload both Resume and CV.')
-      return
-    }
+    const reqs = job.jd_json?.requirements || { name: true, email: true, resume: true }
+    
+    if (reqs.name && !form.name.trim()) return setError('Full Name is required.')
+    if (reqs.email && !form.email.trim()) return setError('Email is required.')
+    if (reqs.resume && !resumeFile) return setError('Resume is required.')
+    if (reqs.cv && !cvFile) return setError('CV is required.')
+    if (reqs.linkedin && !form.linkedin.trim()) return setError('LinkedIn URL is required.')
+    if (reqs.github && !form.github.trim()) return setError('GitHub URL is required.')
     if (chatStep < CHAT_QUESTIONS.length) {
       setError('Please complete the AI chat questions before submitting.')
       return
@@ -225,34 +228,63 @@ export default function CandidateJobPortal() {
               <>
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                    <div className="form-group">
-                      <label style={labelStyle}>Full Name *</label>
-                      <input className="hiris-input" value={form.name} onChange={e => setField('name', e.target.value)} required />
-                    </div>
-                    <div className="form-group">
-                      <label style={labelStyle}>Email *</label>
-                      <input className="hiris-input" type="email" value={form.email} onChange={e => setField('email', e.target.value)} required />
-                    </div>
-                  </div>
-
-                  <div className="form-group">
-                    <label style={labelStyle}>Phone Number</label>
-                    <input className="hiris-input" value={form.phone} onChange={e => setField('phone', e.target.value)} />
+                    {(job.jd_json?.requirements?.name !== false) && (
+                      <div className="form-group">
+                        <label style={labelStyle}>Full Name *</label>
+                        <input className="hiris-input" value={form.name} onChange={e => setField('name', e.target.value)} required />
+                      </div>
+                    )}
+                    {(job.jd_json?.requirements?.email !== false) && (
+                      <div className="form-group">
+                        <label style={labelStyle}>Email *</label>
+                        <input className="hiris-input" type="email" value={form.email} onChange={e => setField('email', e.target.value)} required />
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                     <div className="form-group">
-                      <label style={labelStyle}>Resume (PDF) *</label>
-                      <div className="file-input-wrapper">
-                        <input type="file" accept=".pdf" onChange={e => setResumeFile(e.target.files[0])} required />
-                      </div>
+                      <label style={labelStyle}>Phone Number</label>
+                      <input className="hiris-input" value={form.phone} onChange={e => setField('phone', e.target.value)} />
                     </div>
+                    {job.jd_json?.requirements?.linkedin && (
+                      <div className="form-group">
+                        <label style={labelStyle}>LinkedIn URL *</label>
+                        <input className="hiris-input" value={form.linkedin} onChange={e => setField('linkedin', e.target.value)} />
+                      </div>
+                    )}
+                  </div>
+
+                  {job.jd_json?.requirements?.github && (
                     <div className="form-group">
-                      <label style={labelStyle}>CV (PDF) *</label>
-                      <div className="file-input-wrapper">
-                        <input type="file" accept=".pdf" onChange={e => setCvFile(e.target.files[0])} required />
-                      </div>
+                      <label style={labelStyle}>GitHub URL *</label>
+                      <input className="hiris-input" value={form.github} onChange={e => setField('github', e.target.value)} />
                     </div>
+                  )}
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                    {(job.jd_json?.requirements?.resume !== false) && (
+                      <div className="form-group">
+                        <label style={labelStyle}>Resume (PDF) *</label>
+                        <div className="file-input-wrapper" style={resumeFile ? { borderColor: 'var(--teal)', background: 'var(--teal-10)' } : {}}>
+                          <input type="file" accept=".pdf" onChange={e => setResumeFile(e.target.files[0])} />
+                          <span style={{ display: 'block', fontSize: 12, color: resumeFile ? 'var(--teal)' : 'var(--text-muted)', textAlign: 'center', pointerEvents: 'none' }}>
+                            {resumeFile ? `✓ ${resumeFile.name}` : '📄 Click to upload Resume'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    {job.jd_json?.requirements?.cv && (
+                      <div className="form-group">
+                        <label style={labelStyle}>CV (PDF) *</label>
+                        <div className="file-input-wrapper" style={cvFile ? { borderColor: 'var(--teal)', background: 'var(--teal-10)' } : {}}>
+                          <input type="file" accept=".pdf" onChange={e => setCvFile(e.target.files[0])} />
+                          <span style={{ display: 'block', fontSize: 12, color: cvFile ? 'var(--teal)' : 'var(--text-muted)', textAlign: 'center', pointerEvents: 'none' }}>
+                            {cvFile ? `✓ ${cvFile.name}` : '📄 Click to upload CV'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {questions.map((q, index) => {

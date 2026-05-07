@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../../../components/AppShell'
-import { apiFetch } from '../../../services/api'
+import { apiFetch, assetUrl } from '../../../services/api'
 
 const STAGE_BADGE = {
   'Applied':              'badge-gray',
@@ -69,6 +69,7 @@ export default function HiringCandidates() {
                 <th>Applied</th>
                 <th>Stage</th>
                 <th>Score</th>
+                <th>Documents</th>
               </tr>
             </thead>
             <tbody>
@@ -106,6 +107,21 @@ export default function HiringCandidates() {
                         color: c.score >= 75 ? 'var(--accent-green)' : c.score >= 50 ? 'var(--accent-amber)' : 'var(--accent-red)'
                       }}>{c.score}%</span>
                     ) : '—'}
+                  </td>
+                  <td onClick={e => e.stopPropagation()}>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      {c.resume_path && (
+                        <a href={assetUrl(c.resume_path)} target="_blank" rel="noreferrer" title="Download Resume" style={{ color: 'var(--brand)', display: 'flex' }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>description</span>
+                        </a>
+                      )}
+                      {c.cv_path && (
+                        <a href={assetUrl(c.cv_path)} target="_blank" rel="noreferrer" title="Download CV" style={{ color: 'var(--teal)', display: 'flex' }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>article</span>
+                        </a>
+                      )}
+                      {!c.resume_path && !c.cv_path && <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>—</span>}
+                    </div>
                   </td>
                 </tr>
               ))}

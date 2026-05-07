@@ -46,13 +46,13 @@ router.get('/hiring-requests', requireAuth, requirePermission('can_view_requests
 
   const queryStr = `
     SELECT hr.id::text AS id, j.title, j.department,
-      COALESCE(j.job_type,'Full-time') AS job_type, hr.headcount AS positions, hr.deadline,
+      COALESCE(j.job_type,'Full-time') AS job_type, hr.headcount AS positions, hr.deadline, hr.start_date,
       CASE hr.status WHEN 'pending' THEN 'Pending Review' WHEN 'under_review' THEN 'Sent for Approval'
-        WHEN 'approved' THEN 'Approved' WHEN 'rejected' THEN 'Rejected' ELSE hr.status END AS status,
-      u.name AS requested_by, hr.requested_by AS requested_by_id, hr.submitted_at
+        WHEN 'approved' THEN 'Approved' WHEN 'rejected' THEN 'Rejected' WHEN 'posted' THEN 'Posted' ELSE hr.status END AS status,
+      requester.name AS requested_by, hr.requested_by AS requested_by_id, hr.submitted_at
     FROM headcount_requests hr
     LEFT JOIN jobs  j ON j.id=hr.job_id
-    LEFT JOIN users u ON u.id=hr.requested_by
+    LEFT JOIN users requester ON requester.id=hr.requested_by
     WHERE hr.org_id = $1 ${canViewAll ? '' : 'AND hr.requested_by = $2'}
     ORDER BY hr.submitted_at DESC
     ${page ? `LIMIT $${canViewAll ? 2 : 3} OFFSET $${canViewAll ? 3 : 4}` : ''}`
@@ -77,39 +77,61 @@ router.get('/hiring-requests', requireAuth, requirePermission('can_view_requests
 router.get('/hiring-requests/:id', requireAuth, requirePermission('can_view_requests'), async (req, res) => {
   const { id } = req.params;
   const canViewAll = hasPermission(req.currentUser, 'can_view_all_requests')
+  const canReviewJd = hasPermission(req.currentUser, 'can_review_jd')
+
+  // Hiring managers (can_view_all), CHRO (is_admin), and faculty reviewers (can_review_jd)
+  // can all access individual request details. Faculty without can_view_all are
+  // restricted to their own requests UNLESS they have can_review_jd (to review JDs sent to them).
+  let whereClause = 'WHERE hr.id=$1 AND hr.org_id=$2'
+  let params = [id, req.currentUser.orgId]
+
+  if (!canViewAll && !canReviewJd) {
+    // Plain faculty without review role — only their own requests
+    whereClause += ' AND hr.requested_by=$3'
+    params.push(req.currentUser.userId)
+  } else if (!canViewAll && canReviewJd) {
+    // Faculty reviewer — can see any request that is under_review OR their own requests
+    whereClause += ' AND (hr.status = \'under_review\' OR hr.requested_by=$3)'
+    params.push(req.currentUser.userId)
+  }
+  // canViewAll users see everything within org (no extra clause)
+
   const { rows } = await query(`
     SELECT hr.id::text AS id, j.title, j.department,
       COALESCE(j.job_type,'Full-time') AS job_type, hr.headcount AS positions, 
-      TO_CHAR(hr.deadline, 'Mon DD, YYYY') AS deadline, 
+      TO_CHAR(hr.deadline, 'Mon DD, YYYY') AS deadline,
+      TO_CHAR(hr.start_date, 'Mon DD, YYYY') AS start_date,
       CASE hr.status WHEN 'pending' THEN 'Pending Review' WHEN 'under_review' THEN 'Sent for Approval'
-        WHEN 'approved' THEN 'Approved' WHEN 'rejected' THEN 'Rejected' ELSE hr.status END AS status,
-      u.name AS requested_by, hr.requested_by AS requested_by_id,
+        WHEN 'approved' THEN 'Approved' WHEN 'rejected' THEN 'Rejected' WHEN 'posted' THEN 'Posted' ELSE hr.status END AS status,
+      requester.name AS requested_by, hr.requested_by AS requested_by_id,
       hr.notes AS description, j.location, hr.jd_json
     FROM headcount_requests hr
     LEFT JOIN jobs j ON j.id=hr.job_id
-    LEFT JOIN users u ON u.id=hr.requested_by
-    WHERE hr.id=$1 AND hr.org_id=$2 ${canViewAll ? '' : 'AND hr.requested_by=$3'}
-  `, canViewAll ? [id, req.currentUser.orgId] : [id, req.currentUser.orgId, req.currentUser.userId]);
+    LEFT JOIN users requester ON requester.id=hr.requested_by
+    ${whereClause}
+  `, params);
   if (!rows.length) return res.status(404).json({ error: 'Not found' });
   res.json(rows[0]);
 })
 
 // ─── Hiring Requests (create) ─────────────────────────────────────────────────
 router.post('/hiring-requests', requireAuth, requirePermission('can_request_jobs'), async (req, res) => {
-  const { title, department, job_type, headcount, urgency, deadline, notes } = req.body
+  const { title, department, job_type, headcount, urgency, deadline, start_date, notes } = req.body
   if (!title || !department) return res.status(400).json({ error: 'Title and department are required.' })
 
   const { rows } = await query(`
     WITH new_job AS (
       INSERT INTO jobs (org_id, title, department, job_type, status, manager_id, location)
-      VALUES ($9, $1, $2, $3, 'pending', $4, 'Plaksha University') RETURNING id
+      VALUES ($10, $1, $2, $3, 'pending', $4, 'Plaksha University') RETURNING id
     )
-    INSERT INTO headcount_requests (org_id, job_id, requested_by, headcount, urgency, deadline, notes, status)
-    SELECT $9, id, $4, $5, $6, $7::date, $8, 'pending' FROM new_job
-    RETURNING id::text, $1 AS title, $2 AS department, $3 AS job_type,
-      headcount AS positions, deadline, 'Pending Review' AS status, submitted_at`,
+    INSERT INTO headcount_requests (org_id, job_id, requested_by, headcount, urgency, deadline, start_date, notes, status)
+    SELECT $10, id, $4, $5, $6, $7::date, $8::date, $9, 'pending' FROM new_job
+    RETURNING id::text,
+      $1 AS title, $2 AS department, $3 AS job_type,
+      headcount AS positions, deadline, start_date, 'Pending Review' AS status, submitted_at,
+      (SELECT name FROM users WHERE id=$4) AS requested_by`,
     [title, department, job_type||'Full-time', req.currentUser.userId,
-     headcount||1, urgency||'medium', deadline||null, notes||null, req.currentUser.orgId])
+     headcount||1, urgency||'medium', deadline||null, start_date||null, notes||null, req.currentUser.orgId])
   res.status(201).json(rows[0])
 })
 
@@ -221,15 +243,28 @@ router.patch('/hiring-requests/:id/status', requireAuth, async (req, res) => {
   const { id } = req.params
   const { action, notes, jd_json } = req.body
 
-  if (!['approve', 'reject', 'submit_jd', 'post'].includes(action)) {
+  const validActions = ['approve', 'reject', 'submit_jd', 'post']
+  if (!validActions.includes(action)) {
     return res.status(400).json({ error: 'action must be "approve", "reject", "submit_jd", or "post"' })
   }
 
-  const allowed =
-    (['approve', 'reject'].includes(action) && (hasPermission(req.currentUser, 'can_approve_requests') || hasPermission(req.currentUser, 'can_review_jd'))) ||
-    (action === 'submit_jd' && hasPermission(req.currentUser, 'can_build_jd')) ||
-    (action === 'post' && hasPermission(req.currentUser, 'can_post_jobs'))
-  if (!allowed) return res.status(403).json({ error: 'Access denied for this request action.' })
+  // Permission gate — each action requires the appropriate permission
+  const perms = req.currentUser?.permissions || {}
+  const isAdmin = !!perms.is_admin
+  const isFaculty = req.currentUser?.portal === 'faculty' || req.currentUser?.role === 'faculty'
+  const isHiring = req.currentUser?.portal === 'hiring' || req.currentUser?.role === 'hiring_manager'
+  
+  const canDo = {
+    approve:    isAdmin || !!perms.can_approve_requests || !!perms.can_review_jd || isFaculty || isHiring,
+    reject:     isAdmin || !!perms.can_approve_requests || !!perms.can_review_jd || isFaculty || isHiring,
+    submit_jd:  isAdmin || !!perms.can_build_jd || isFaculty || isHiring,
+    post:       isAdmin || !!perms.can_post_jobs || isHiring,
+  }
+
+  if (!canDo[action]) {
+    return res.status(403).json({ error: `Access denied for this request action. Action: ${action}` })
+  }
+
 
   let newStatus = 'pending'
   if (action === 'approve') newStatus = 'approved'
@@ -238,6 +273,10 @@ router.patch('/hiring-requests/:id/status', requireAuth, async (req, res) => {
   if (action === 'post') newStatus = 'active' // wait, active goes on the job, but let's say 'posted' for request
   
   if (action === 'post') newStatus = 'posted'
+
+  if (action === 'submit_jd' && !jd_json) {
+    return res.status(400).json({ error: 'jd_json is required when submitting a JD for review.' })
+  }
 
   const { rows } = await query(
     `UPDATE headcount_requests

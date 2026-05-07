@@ -57,6 +57,7 @@ export default function CandidateProfile() {
   const [noteText, setNoteText] = useState('')
   const [savingNote, setSavingNote] = useState(false)
   const [movingStage, setMovingStage] = useState(false)
+  const [startingInterview, setStartingInterview] = useState(false)
   const [interviews, setInterviews] = useState([])
 
   useEffect(() => {
@@ -100,6 +101,29 @@ export default function CandidateProfile() {
     setMovingStage(false)
   }
 
+  // Start a live interview session from the candidate profile
+  const handleStartInterview = async (type) => {
+    if (!candidate?.application_id) return
+    setStartingInterview(true)
+    try {
+      const res = await apiFetch('/interviews/start', {
+        method: 'POST',
+        body: JSON.stringify({ application_id: candidate.application_id, type })
+      })
+      if (res.ok) {
+        const { id: sessionId } = await res.json()
+        navigate(`/interview-room/${type}/${sessionId}`)
+      } else {
+        const d = await res.json()
+        alert(d?.error || 'Failed to start interview session.')
+      }
+    } catch (e) {
+      alert('Network error starting interview.')
+    } finally {
+      setStartingInterview(false)
+    }
+  }
+
   const initials = candidate?.name?.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?'
   const edu = candidate?.education || []
   const exp = candidate?.experience || []
@@ -110,6 +134,9 @@ export default function CandidateProfile() {
   const generatedQuestions = candidate?.generated_behavioral_questions || []
   const currentStageIdx = STAGE_FLOW.indexOf(candidate?.stage_raw || 'applied')
   const canMoveCandidates = !!(user?.permissions?.can_move_candidates || user?.permissions?.is_admin)
+  // Role capabilities — derived from permissions, not hardcoded
+  const canConductInterview = !!(user?.permissions?.can_conduct_interview)
+  const canFinalDecide      = !!(user?.permissions?.can_make_final_decision || user?.permissions?.is_admin)
 
   if (loading) return (
     <AppShell portal={portal} pageTitle="Candidate Profile">
@@ -251,24 +278,76 @@ export default function CandidateProfile() {
                 })}
               </div>
 
-              {/* Stage Action Buttons — hiring manager only */}
-              {canMoveCandidates && candidate.stage !== 'Hired' && candidate.stage !== 'Rejected' && (
+              {/* Stage Action Buttons — role-aware */}
+              {candidate.stage !== 'Rejected' && candidate.stage !== 'Offered' && (
                 <div style={{ marginTop: 20, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {currentStageIdx < STAGE_FLOW.length - 1 && (
-                    <button disabled={movingStage} onClick={() => handleMoveStage(STAGE_FLOW[currentStageIdx + 1])} className="btn btn-primary" style={{ padding: '6px 16px', fontSize: 12 }}>
-                      Move to {({
-                        applied:              'Under Review',
-                        under_review:         'Technical Interview',
-                        technical_interview:  'Behavioral Interview',
-                        behavioral_interview: 'Final Review',
-                        final_review:         'Offer',
-                        offered:              'Hired'
-                      })[candidate.stage_raw] || 'Next Stage'}
+
+                  {/* Hiring Manager: move applied → under_review, or under_review → technical_interview */}
+                  {canMoveCandidates && (candidate.stage_raw === 'applied' || candidate.stage_raw === 'under_review') && (
+                    <>
+                      <button
+                        disabled={movingStage}
+                        onClick={() => handleMoveStage(STAGE_FLOW[currentStageIdx + 1])}
+                        className="btn btn-primary"
+                        style={{ padding: '6px 16px', fontSize: 12 }}
+                      >
+                        {candidate.stage_raw === 'applied' ? 'Move to Review' : 'Send to Technical Interview'}
+                      </button>
+                      <button
+                        disabled={movingStage}
+                        onClick={() => handleMoveStage('rejected')}
+                        className="btn btn-outline"
+                        style={{ padding: '6px 16px', fontSize: 12, color: 'var(--accent-red)', borderColor: 'var(--accent-red)' }}
+                      >
+                        Reject
+                      </button>
+                    </>
+                  )}
+
+                  {/* Faculty: start technical interview when candidate is in technical_interview stage */}
+                  {canConductInterview && candidate.stage_raw === 'technical_interview' && (
+                    <button
+                      disabled={startingInterview}
+                      onClick={() => handleStartInterview('technical')}
+                      className="btn btn-primary"
+                      style={{ padding: '6px 16px', fontSize: 12 }}
+                    >
+                      {startingInterview ? 'Starting…' : '▶ Start Technical Interview'}
                     </button>
                   )}
-                  <button disabled={movingStage} onClick={() => handleMoveStage('rejected')} className="btn btn-outline" style={{ padding: '6px 16px', fontSize: 12, color: 'var(--accent-red)', borderColor: 'var(--accent-red)' }}>
-                    Reject
-                  </button>
+
+                  {/* CHRO: start behavioral interview, or make final offer / reject from final_review */}
+                  {canConductInterview && candidate.stage_raw === 'behavioral_interview' && (
+                    <button
+                      disabled={startingInterview}
+                      onClick={() => handleStartInterview('behavioral')}
+                      className="btn btn-primary"
+                      style={{ padding: '6px 16px', fontSize: 12 }}
+                    >
+                      {startingInterview ? 'Starting…' : '▶ Start Behavioral Interview'}
+                    </button>
+                  )}
+                  {canMoveCandidates && candidate.stage_raw === 'final_review' && (
+                    <>
+                      <button
+                        disabled={movingStage}
+                        onClick={() => handleMoveStage('offered')}
+                        className="btn btn-primary"
+                        style={{ padding: '6px 16px', fontSize: 12 }}
+                      >
+                        Make Offer
+                      </button>
+                      <button
+                        disabled={movingStage}
+                        onClick={() => handleMoveStage('rejected')}
+                        className="btn btn-outline"
+                        style={{ padding: '6px 16px', fontSize: 12, color: 'var(--accent-red)', borderColor: 'var(--accent-red)' }}
+                      >
+                        Reject
+                      </button>
+                    </>
+                  )}
+
                 </div>
               )}
             </div>

@@ -51,19 +51,38 @@ function buildNav(user) {
   const candidatesPath = sectionPath(section, '/candidates')
   const interviewsPath = section === 'hiring' ? '/hiring/schedule' : sectionPath(section, '/interviews')
 
+  if (section === 'chro') {
+    return [
+      { label: 'Overview', to: '/chro', icon: 'home', end: true, show: true },
+      { label: 'Policies', to: '/chro/policies', icon: 'policy', show: true },
+      { label: 'Team', to: '/chro/team', icon: 'team', show: true },
+      { label: 'Analytics', to: '/chro/analytics', icon: 'star', show: true },
+      { label: 'Final Interview', to: '/chro/interviews', icon: 'calendar', show: true },
+      { label: 'Role Management', to: '/settings/roles', icon: 'settings', show: true },
+    ]
+  }
+
+  if (section === 'faculty') {
+    return [
+      { label: 'Overview', to: '/faculty', icon: 'home', end: true, show: true },
+      { label: 'My Requests', to: '/faculty/requests', icon: 'briefcase', show: true },
+      { label: 'JD Reviews', to: '/faculty/jd-reviews', icon: 'file', show: true },
+      { label: 'Candidates', to: '/faculty/candidates', icon: 'users', show: true },
+      { label: 'Schedule', to: '/faculty/interviews', icon: 'calendar', show: true },
+    ]
+  }
+
+  // default to hiring manager
   return [
     { label: 'Overview', to: user?.home_path || '/dashboard', icon: 'home', end: true, show: true },
-    { label: 'Hiring Requests', to: requestPath, icon: 'briefcase', show: hasPerm(user, 'can_view_requests') },
-    { label: 'Job Postings', to: '/hiring/jobs', icon: 'file', show: hasAnyPerm(user, ['can_view_jobs', 'can_build_jd', 'can_review_jd']) },
-    { label: 'Posted Jobs', to: '/hiring/posted-jobs', icon: 'briefcase', show: hasPerm(user, 'can_view_jobs') },
-    { label: 'Candidates', to: candidatesPath, icon: 'users', show: hasPerm(user, 'can_view_candidates') },
-    { label: 'Interviews', to: interviewsPath, icon: 'calendar', show: hasAnyPerm(user, ['can_view_interviews', 'can_conduct_interview']) },
-    { label: 'Policies', to: '/chro/policies', icon: 'policy', show: hasPerm(user, 'can_view_policies') },
-    { label: 'Team', to: '/chro/team', icon: 'team', show: hasPerm(user, 'can_manage_team') },
-    { label: 'Analytics', to: '/chro/analytics', icon: 'star', show: hasPerm(user, 'can_view_analytics') },
-    { label: 'Role Management', to: '/settings/roles', icon: 'settings', show: hasPerm(user, 'can_manage_roles') },
-  ].filter(item => item.show)
+    { label: 'Hiring Requests', to: requestPath, icon: 'briefcase', show: true },
+    { label: 'Job Postings', to: '/hiring/jobs', icon: 'file', show: true },
+    { label: 'Posted Jobs', to: '/hiring/posted-jobs', icon: 'globe', show: true },
+    { label: 'Candidates', to: candidatesPath, icon: 'users', show: true },
+    { label: 'Schedule', to: interviewsPath, icon: 'calendar', show: true },
+  ]
 }
+
 
 function SunIcon() {
   return (

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../../../components/AppShell'
-import { apiFetch } from '../../../services/api'
+import { apiFetch, assetUrl } from '../../../services/api'
 
 const STAGE_BADGE = {
   'Applied':              'badge-gray',
@@ -42,7 +42,7 @@ export default function FacultyCandidates() {
         : filtered.length === 0 ? <div className="empty-state">No candidates found</div>
         : (
           <table className="hiris-table">
-            <thead><tr><th>Candidate</th><th>Role Applied</th><th>Source</th><th>Applied</th><th>Stage</th><th>Score</th></tr></thead>
+            <thead><tr><th>Candidate</th><th>Role Applied</th><th>Source</th><th>Applied</th><th>Stage</th><th>Score</th><th>Docs</th></tr></thead>
             <tbody>
               {filtered.map(c => (
                 <tr key={c.id} onClick={() => navigate(`/faculty/candidates/${c.id}`)} style={{ cursor: 'pointer' }}>
@@ -57,6 +57,20 @@ export default function FacultyCandidates() {
                   <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{c.applied_at ? new Date(c.applied_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—'}</td>
                   <td><span className={`badge ${STAGE_BADGE[c.stage] || 'badge-gray'}`}>{c.stage || 'Applied'}</span></td>
                   <td>{c.score != null ? <span style={{ fontWeight: 700, fontSize: 13, color: c.score >= 75 ? 'var(--accent-green)' : c.score >= 50 ? 'var(--accent-amber)' : 'var(--accent-red)' }}>{c.score}%</span> : '—'}</td>
+                  <td onClick={e => e.stopPropagation()}>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      {c.resume_path && (
+                        <a href={assetUrl(c.resume_path)} target="_blank" rel="noreferrer" title="Download Resume" style={{ color: 'var(--brand)', display: 'flex' }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>description</span>
+                        </a>
+                      )}
+                      {c.cv_path && (
+                        <a href={assetUrl(c.cv_path)} target="_blank" rel="noreferrer" title="Download CV" style={{ color: 'var(--teal)', display: 'flex' }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>article</span>
+                        </a>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>

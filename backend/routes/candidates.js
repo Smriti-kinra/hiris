@@ -57,8 +57,8 @@ router.get('/candidates/:id', requireAuth, requirePermission('can_view_candidate
     SELECT
       c.id::text                   AS id,
       c.name, c.email, c.phone, c.headline, c.location,
-      a.resume_file_id             AS resume_path, 
-      a.cv_file_id                 AS cv_path,
+      CASE WHEN a.resume_file_id IS NOT NULL THEN 'uploads/' || a.resume_file_id ELSE NULL END AS resume_path, 
+      CASE WHEN a.cv_file_id IS NOT NULL THEN 'uploads/' || a.cv_file_id ELSE NULL END AS cv_path,
       COALESCE(c.source,'Direct')  AS source,
       c.ai_score                   AS score,
       c.education, c.experience, c.skills,
