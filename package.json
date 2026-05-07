@@ -3,21 +3,25 @@
   "private": true,
   "version": "1.0.0",
   "description": "HIRIS is a full-stack hiring platform with role-based portals for CHRO, Hiring Managers, and Faculty.",
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "bootstrap":      "npm install",
-    "build":          "npm --workspaces run build",
-    "test":           "npm --workspaces test",
-    "start":          "npm --workspace @hiris/backend start",
-    "backend":        "npm --workspace @hiris/backend start",
-    "dev":            "npm --workspace @hiris/frontend run dev",
-    "faculty":        "npm --workspace @hiris/frontend run faculty",
-    "hiring":         "npm --workspace @hiris/frontend run hiring",
-    "chro":           "npm --workspace @hiris/frontend run chro",
-    "recruiter":      "npm --workspace @hiris/frontend run recruiter",
-    "candidate":      "npm --workspace @hiris/frontend run candidate",
-    "dev:all":        "npm --workspace @hiris/frontend run dev:all",
-    "build:all":      "npm --workspace @hiris/frontend run build:all"
+    "bootstrap": "npm install",
+    "build": "npm --workspaces run build",
+    "test": "npm --workspaces test",
+    "start": "npm --workspace @hiris/backend start",
+    "backend": "npm --workspace @hiris/backend start",
+    "dev": "npm --workspace @hiris/frontend run dev",
+    "faculty": "npm --workspace @hiris/frontend run faculty",
+    "hiring": "npm --workspace @hiris/frontend run hiring",
+    "chro": "npm --workspace @hiris/frontend run chro",
+    "recruiter": "npm --workspace @hiris/frontend run recruiter",
+    "candidate": "npm --workspace @hiris/frontend run candidate",
+    "dev:all": "npm --workspace @hiris/frontend run dev:all",
+    "start:all": "concurrently -n \"backend,landing,faculty,hiring,chro,recruiter,candidate\" -c \"bgBlue.bold,bgCyan.bold,bgGreen.bold,bgYellow.bold,bgMagenta.bold,bgWhite.bold,bgRed.bold\" \"npm run backend\" \"npm --workspace @hiris/frontend run dev\" \"npm --workspace @hiris/frontend run faculty\" \"npm --workspace @hiris/frontend run hiring\" \"npm --workspace @hiris/frontend run chro\" \"npm --workspace @hiris/frontend run recruiter\" \"npm --workspace @hiris/frontend run candidate\"",
+    "build:all": "npm --workspace @hiris/frontend run build:all"
   },
   "repository": {
     "type": "git",
@@ -29,5 +33,8 @@
   "bugs": {
     "url": "https://github.com/Smriti-kinra/hiris/issues"
   },
-  "homepage": "https://github.com/Smriti-kinra/hiris#readme"
+  "homepage": "https://github.com/Smriti-kinra/hiris#readme",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
 }
