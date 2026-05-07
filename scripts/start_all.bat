@@ -4,8 +4,8 @@ setlocal
 :: --- HIRIS - start backend + unified frontend -------------------------
 
 set "ROOT=%~dp0"
-set "BACKEND=%ROOT%backend"
-set "FRONTEND=%ROOT%hiris-unified"
+set "BACKEND=%ROOT%apps\backend"
+set "FRONTEND=%ROOT%apps\frontend"
 
 :: -- 1. Start the local database -----------------------------------------
 echo - Starting local PostgreSQL instance...
@@ -38,8 +38,8 @@ echo - Starting backend on :3001
 cd /d "%BACKEND%"
 start /B "" npm run dev
 
-:: -- 5. Start unified frontend -----------------------------------------
-echo - Starting HIRIS unified app on :5176
+:: -- 5. Start frontend -----------------------------------------
+echo - Starting HIRIS frontend app on :5176
 cd /d "%FRONTEND%"
 start /B "" npm run dev
 

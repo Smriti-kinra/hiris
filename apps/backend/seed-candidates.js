@@ -63,7 +63,7 @@ async function seedCandidates() {
       // 1. Insert Candidate
       await query(`
         INSERT INTO candidates (id, name, email, phone, headline, location, ai_score, source, resume_path, cv_path, education, experience, skills, chatbot_transcript)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, 'LinkedIn', 'uploads/seeded_resume.pdf', 'uploads/seeded_cv.pdf', $8, $9, $10, $11)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, 'LinkedIn', 'uploads/seeded/seeded_resume.pdf', 'uploads/seeded/seeded_cv.pdf', $8, $9, $10, $11)
       `, [
         c.id, c.name, c.email, '+91-99999-00000', c.headline, c.location, c.ai_score,
         JSON.stringify([{ year: '2020', grade: 'A', degree: 'Relevant Degree', institution: 'Top University' }]),

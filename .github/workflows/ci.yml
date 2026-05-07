@@ -21,19 +21,19 @@ jobs:
         cache-dependency-path: '**/package-lock.json'
 
     - name: Install Backend Dependencies
-      working-directory: ./backend
+      working-directory: ./apps/backend
       run: npm ci
 
     - name: Install Frontend Dependencies
-      working-directory: ./hiris-unified
+      working-directory: ./apps/frontend
       run: npm ci
 
     - name: Build Frontend
-      working-directory: ./hiris-unified
+      working-directory: ./apps/frontend
       run: npm run build
 
     - name: Backend Unit Tests
-      working-directory: ./backend
+      working-directory: ./apps/backend
       run: npm test
 
     - name: Backend Smoke Test

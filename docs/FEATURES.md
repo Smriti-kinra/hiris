@@ -1,68 +1,82 @@
 # HIRIS Platform Features
 
-Welcome to the HIRIS (Hiring Intelligence & Recruitment Information System) feature overview. HIRIS is designed with three distinct, role-based portals that streamline the recruitment lifecycle from the initial headcount request all the way to final interviews and organizational analytics.
+Welcome to the HIRIS (Hiring Intelligence & Recruitment Information System) feature overview. HIRIS is built as a role-aware recruitment platform with dedicated portals for CHROs, hiring teams, and faculty collaborators.
 
-Below is a detailed breakdown of the platform's core features, accompanied by animated walkthroughs.
+The platform supports every step of the hiring lifecycle:
+- request and approval management,
+- job description creation,
+- candidate pipeline tracking,
+- interview coordination,
+- analytics and policy governance.
 
 ---
 
-## 0. Onboarding & Organisation Setup
+## 0. Onboarding & Organization Setup
 
-The first time a new organization uses HIRIS, the CHRO or administrator can create an account and define their workflow in seconds.
+HIRIS enables an administrator or CHRO to configure the organization and hiring workflow in minutes.
 
 ### Key Features:
-- **Org Customisation:** Define organization size, industry, and name to brand the workspace.
-- **Roles & Permissions Builder:** Create and customize specific hiring roles (e.g., Hiring Manager vs Department Leader) with granular permissions.
-- **Bulk Team Invites:** Pre-provision accounts for your entire hiring team in one step, automatically dispatching them to their correct portals.
-- **Seamless Authentication:** Automatic login and session generation upon successful setup.
+- **Quick organization setup:** Configure company name, size, industry, and hiring preferences during onboarding.
+- **Role-based access:** Define custom roles and permissions for CHRO, Hiring Manager, Faculty, and other contributors.
+- **Custom hiring stages:** Tailor visible candidate stages to match institutional review processes.
+- **Secure account provisioning:** Fast team onboarding with pre-configured access for hiring stakeholders.
 
 ---
 
 ## 1. Hiring Manager Portal
 
-The Hiring Manager Portal is designed for department heads and team leads to manage their active job openings, track candidate pipelines, and review interview schedules.
+The Hiring Manager portal is optimized for recruiters and department leaders who own hiring requests and candidate sourcing.
 
-### Key Features:
-- **Pipeline Dashboard:** A high-level view of pending requests, active openings, and total candidates.
-- **Job Postings Manager:** View all active roles, urgency levels, and candidate counts at a glance.
-- **Interview Scheduler:** Track upcoming and completed interviews with detailed candidate information and direct Calendly links.
-- **New Request Modal:** Quickly submit new headcount requests directly to the CHRO.
-
-![Hiring Manager Walkthrough](docs/assets/hiring_manager_portal_1777671007057.webp)
+### Core capabilities:
+- **Requests dashboard:** Submit and monitor headcount requests, approvals, and staffing status.
+- **Job posting builder:** Create, edit, and publish job descriptions with structured skills, stage definitions, and summary details.
+- **Candidate pipeline:** View all candidates for active roles, with quick access to detailed candidate profiles.
+- **Interview management:** Track scheduled interviews and candidate interview status across rounds.
+- **Request submission modal:** Rapidly raise new headcount requests with urgency, job type, and role details.
 
 ---
 
 ## 2. Faculty Portal
 
-The Faculty Portal caters to academic staff involved in the hiring process. It allows professors and department chairs to request new faculty positions and review incoming candidates.
+The Faculty portal supports academic staff and department reviewers in the hiring process.
 
-### Key Features:
-- **My Requests:** Track the status of your submitted headcount requests (Pending, Under Review, Approved).
-- **New Headcount Requests:** A streamlined form to request new positions, specifying the role, department, and urgency.
-- **Candidate Review (JD Reviews):** Participate in reviewing candidate applications and providing AI-assisted feedback.
-- **Dark/Light Mode:** Full support for professional dark and light themes across the platform.
-
-![Faculty Portal Walkthrough](docs/assets/faculty_portal_demo_1777671083489.webp)
+### Core capabilities:
+- **Faculty dashboard:** Access assigned requests, pending reviews, and interview workload metrics.
+- **Request tracking:** See the status of submitted faculty headcount requests in one place.
+- **JD reviews:** Review and approve job descriptions before they move into recruitment.
+- **Candidate access:** Browse candidates, inspect profiles, and follow application progress.
+- **Interview overview:** See scheduled interviews and candidate feedback for academic hiring rounds.
 
 ---
 
 ## 3. CHRO Portal (Executive Dashboard)
 
-The Chief Human Resources Officer (CHRO) Portal provides a bird's-eye view of the entire organization's hiring intelligence, empowering executives to make data-driven decisions.
+The CHRO portal gives HR leaders the full organizational view needed to govern hiring and team capacity.
 
-### Key Features:
-- **Organization Overview:** Real-time metrics on total requests, pending approvals, and active openings.
-- **Hiring Analytics:** Visualized data including the Hiring Funnel, Candidates by Source, and Jobs by Department.
-- **Policy Management:** An interactive, accordion-style repository of organizational hiring policies and approval workflows.
-- **CSV Export:** One-click export of hiring request reports for external auditing or offline review.
+### Core capabilities:
+- **Executive overview:** Real-time metrics for total requests, open roles, and hiring velocity.
+- **Analytics:** Visual reports on candidate trends, role demand, and interview throughput.
+- **Policy & team management:** Manage hiring policies, approval workflows, and access controls.
+- **Candidate oversight:** Review the institution-wide candidate pipeline and open job assignments.
+- **Export reporting:** Export hiring data for audits or leadership reviews.
 
-![CHRO Portal Walkthrough](docs/assets/chro_portal_demo_1777671231194.webp)
+---
+
+## 4. Public Candidate Experience
+
+HIRIS includes a public-facing candidate portal for job application flow and candidate interactions.
+
+### Core capabilities:
+- **Candidate job portal:** Public-facing job access via secure tokenized links.
+- **Application interaction:** Collect candidate feedback, responses, and application details from external candidates.
+- **Behavioral interview assistant:** Support interview preparation with AI-driven behavioral question generation.
 
 ---
 
 ## Shared Platform Capabilities
 
-- **Secure Authentication:** JWT-based session management utilizing `httpOnly` cookies for maximum XSS protection.
-- **Responsive Design:** A mobile-first approach with a sliding navigation drawer, ensuring accessibility on any device.
-- **Performance:** Optimized code-splitting utilizing React's `<Suspense>` boundaries ensures rapid page loads.
-- **Resilience:** Global error boundaries catch unexpected crashes to provide a graceful recovery UI.
+- **Role-based security:** Permission-aware routing ensures users only see what their role allows.
+- **Modern UI:** Responsive, accessible layout with portal-specific navigation and theme support.
+- **API-first backend:** Express API routes power requests, candidate data, AI workflows, and interview sessions.
+- **AI support:** Integrated AI features for job description writing, interview question generation, and candidate insights.
+- **Resilience:** Centralized error handling, health checks, and secure session management for production readiness.
