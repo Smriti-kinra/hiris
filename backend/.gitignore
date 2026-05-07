@@ -1,1 +1,5 @@
 .env
+pgdata/
+logfile
+*.log
+node_modules/
