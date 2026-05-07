@@ -106,6 +106,11 @@ app.use('/api',       require('./routes/interviews'))
 app.use('/api',       require('./routes/job_portal'))
 app.use('/api/ai',    require('./routes/ai'))
 
+// 404 for missing /api routes
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: `API route not found: ${req.method} ${req.path}` })
+})
+
 /** @swagger
  * /api/health:
  *   get:

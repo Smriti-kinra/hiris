@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { apiFetch } from '../services/api'
+import { apiFetch, safeJson } from '../services/api'
 
 const AuthContext = createContext(null)
 
@@ -20,7 +20,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('hiris_user')
 
     apiFetch('/auth/me')
-      .then(r => r.ok ? r.json() : null)
+      .then(safeJson)
       .then(data => { if (data?.user) setUser(data.user) })
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -31,7 +31,7 @@ export function AuthProvider({ children }) {
       method: 'POST',
       body:   JSON.stringify({ email, password }),
     })
-    const data = await res.json()
+    const data = await safeJson(res)
     if (!res.ok) throw new Error(data.error || 'Login failed')
     setUser(data.user)
     return data.user

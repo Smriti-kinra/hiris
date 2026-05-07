@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { useParams } from 'react-router-dom'
-import { apiFetch } from '../../services/api'
+import { apiFetch, safeJson } from '../../services/api'
 import Navbar from '../../components/layout/Navbar'
 import Footer from '../../components/layout/Footer'
 
@@ -42,8 +42,9 @@ export default function CandidateJobPortal() {
     let mounted = true
     setLoading(true)
     apiFetch(`/jobs/public/${token}`)
-      .then(res => res.json())
+      .then(safeJson)
       .then(data => {
+        if (!data) throw new Error('Invalid response from server')
         if (data.error) throw new Error(data.error)
         if (mounted) setJob(data)
       })
@@ -93,8 +94,8 @@ export default function CandidateJobPortal() {
         method: 'POST',
         body: formData,
       })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || 'Could not submit application')
+      const data = await safeJson(response)
+      if (!response.ok) throw new Error(data?.error || 'Could not submit application')
       setSuccess(true)
     } catch (err) {
       setError(err.message)

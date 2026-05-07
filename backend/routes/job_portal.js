@@ -98,8 +98,18 @@ router.post('/jobs/public/:token/apply', upload.fields([{ name: 'resume_file' },
   const candidateId = candRes.rows[0].id
   
   // Create Application
-  const parsedChatAnswers = typeof ai_chat_answers === 'string' ? JSON.parse(ai_chat_answers) : ai_chat_answers || []
-  const parsedFormAnswers = typeof form_answers === 'string' ? JSON.parse(form_answers) : form_answers || {}
+  let parsedChatAnswers = []
+  let parsedFormAnswers = {}
+  try {
+    if (ai_chat_answers) {
+      parsedChatAnswers = typeof ai_chat_answers === 'string' ? JSON.parse(ai_chat_answers) : ai_chat_answers
+    }
+    if (form_answers) {
+      parsedFormAnswers = typeof form_answers === 'string' ? JSON.parse(form_answers) : form_answers
+    }
+  } catch (err) {
+    console.error('Failed to parse application answers JSON', err)
+  }
   
   const appRes = await query(`
     INSERT INTO applications (candidate_id, job_id, stage, resume_file_id, cv_file_id, ai_chat_answers, application_answers)

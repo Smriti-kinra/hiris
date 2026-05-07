@@ -22,13 +22,39 @@ export async function apiFetch(path, options = {}) {
   const isBodyRequest = ['POST', 'PUT', 'PATCH'].includes((options.method || '').toUpperCase())
   const isFormData = options.body instanceof FormData
 
-  const res = await fetch(apiUrl(path), {
-    ...options,
-    credentials: 'include',
-    headers: {
-      ...(isBodyRequest && !isFormData ? { 'Content-Type': 'application/json' } : {}),
-      ...options.headers,
-    },
-  })
-  return res
+  try {
+    const res = await fetch(apiUrl(path), {
+      ...options,
+      credentials: 'include',
+      headers: {
+        ...(isBodyRequest && !isFormData ? { 'Content-Type': 'application/json' } : {}),
+        ...options.headers,
+      },
+    })
+    return res
+  } catch (err) {
+    console.error(`[API FETCH ERROR] ${path}:`, err)
+    // Return a fake response object that behaves like a failed fetch
+    return {
+      ok: false,
+      status: 503,
+      json: async () => ({ error: 'Network error or server unreachable.' }),
+      text: async () => 'Network error'
+    }
+  }
+}
+
+/**
+ * Safely parse JSON from a response object.
+ * Prevents "Unexpected end of JSON input" errors.
+ */
+export async function safeJson(res) {
+  try {
+    const text = await res.text()
+    if (!text) return null
+    return JSON.parse(text)
+  } catch (err) {
+    console.error('[SAFE JSON ERROR]:', err)
+    return { error: 'Failed to parse server response.' }
+  }
 }
