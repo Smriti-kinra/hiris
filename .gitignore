@@ -33,3 +33,8 @@ logs/
 *.swp
 *.swo
 .history/
+
+# ── HIRIS Dynamic Port System (auto-generated, do not commit) ──────────────────
+scripts/.resolved-ports.json
+scripts/.allowed-origins.txt
+apps/frontend/.env.landing

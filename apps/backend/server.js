@@ -51,13 +51,16 @@ app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'))
 function isAllowedCorsOrigin(origin) {
   if (!origin) return true
 
-  const configuredOrigins = (process.env.FRONTEND_URL || '')
-    .split(',')
-    .map(value => value.trim())
-    .filter(Boolean)
+  // Merge FRONTEND_URL (legacy single value) + ALLOWED_ORIGINS (multi-portal, injected by inject-env.js)
+  const raw = [
+    process.env.FRONTEND_URL   || '',
+    process.env.ALLOWED_ORIGINS || '',
+  ].join(',')
 
+  const configuredOrigins = raw.split(',').map(v => v.trim()).filter(Boolean)
   if (configuredOrigins.includes(origin)) return true
 
+  // In development, all localhost/127.0.0.1 origins are permitted regardless of port
   if (process.env.NODE_ENV !== 'production') {
     return /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
   }
