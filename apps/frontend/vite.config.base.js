@@ -20,7 +20,7 @@ function portalHtmlPlugin(htmlFile) {
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         // Serve portal HTML for root and any unmatched non-asset route
-        if (req.url === '/' || (!req.url.includes('.') && !req.url.startsWith('/api'))) {
+        if (req.url === '/' || (!req.url.includes('.') && !req.url.startsWith('/api') && !req.url.startsWith('/@'))) {
           req.url = `/${htmlFile}`
         }
         next()
