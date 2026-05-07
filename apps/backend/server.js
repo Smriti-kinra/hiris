@@ -105,6 +105,7 @@ app.use('/api',       require('./routes/pipeline'))
 app.use('/api',       require('./routes/candidates'))
 app.use('/api',       require('./routes/interviews'))
 app.use('/api',       require('./routes/job_portal'))
+app.use('/api',       require('./routes/archive'))
 app.use('/api/ai',    require('./routes/ai'))
 
 // 404 for missing /api routes

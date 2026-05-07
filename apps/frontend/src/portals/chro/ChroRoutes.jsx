@@ -18,6 +18,7 @@ const CandidateProfile = lazy(() => import('../../pages/portals/shared/Candidate
 const BehavioralRoom   = lazy(() => import('../../pages/portals/shared/BehavioralInterviewRoom'))
 const InterviewSummary = lazy(() => import('../../pages/portals/shared/InterviewSummary'))
 const RoleManagement   = lazy(() => import('../../pages/settings/roles/RoleManagement'))
+const CHROArchive      = lazy(() => import('../../pages/portals/chro/Archive'))
 
 const Loading = () => <div style={{ display:'flex', justifyContent:'center', paddingTop:80 }}><div className="spinner" /></div>
 
@@ -50,6 +51,9 @@ export default function ChroRoutes() {
           </Route>
           <Route element={<ProtectedRoute requiredPermission="can_manage_roles" />}>
             <Route path="/settings/roles"                    element={<RoleManagement />} />
+          </Route>
+          <Route element={<ProtectedRoute requiredPermission="can_view_analytics" />}>
+            <Route path="/chro/archive"                      element={<CHROArchive />} />
           </Route>
         </Route>
 

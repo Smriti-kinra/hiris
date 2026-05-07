@@ -26,6 +26,7 @@ const icons = {
   calendar:   'M8 2v4 M16 2v4 M3 10h18 M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z',
   policy:     'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z',
   team:       'M12 4.5C12 6.43 10.43 8 8.5 8S5 6.43 5 4.5 6.57 1 8.5 1 12 2.57 12 4.5z M16 8a2.5 2.5 0 100-5 2.5 2.5 0 000 5z M0 18v-1.5C0 14.57 1.79 13 4 13h9c2.21 0 4 1.57 4 3.5V18 M19 13c2.21 0 4 1.57 4 3.5V18',
+  archive:    'M21 8v13H3V8 M1 3h22v5H1z M10 12h4',
 }
 
 function hasPerm(user, key) {
@@ -69,6 +70,7 @@ const PORTAL_NAV_BUILDERS = {
     { label: 'Policies',         to: '/chro/policies',         icon: 'policy',    show: hasPerm(user, 'can_view_policies') },
     { label: 'Team',             to: '/chro/team',             icon: 'team',      show: hasPerm(user, 'can_manage_team') },
     { label: 'Role Management',  to: '/settings/roles',        icon: 'settings',  show: hasPerm(user, 'can_manage_roles') },
+    { label: 'Archive',          to: '/chro/archive',          icon: 'archive',   show: hasPerm(user, 'can_view_analytics') || hasPerm(user, 'is_admin') },
   ].filter(i => i.show !== false),
 
   recruiter: (user) => [

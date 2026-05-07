@@ -36,6 +36,7 @@ const CHROTeam = lazy(() => import('../pages/portals/chro/Team'))
 const CHROAnalytics = lazy(() => import('../pages/portals/chro/Analytics'))
 const CHROCandidates = lazy(() => import('../pages/portals/chro/Candidates'))
 const CHROInterviews = lazy(() => import('../pages/portals/chro/Interviews'))
+const CHROArchive    = lazy(() => import('../pages/portals/chro/Archive'))
 
 function LoadingFallback() {
   return (
@@ -126,6 +127,7 @@ export default function AppRoutes() {
         </Route>
         <Route element={<ProtectedRoute requiredPermission="can_view_analytics" />}>
           <Route path="/chro/analytics" element={<CHROAnalytics />} />
+          <Route path="/chro/archive"   element={<CHROArchive />} />
         </Route>
         <Route element={<ProtectedRoute requiredPermission="can_view_candidates" />}>
           <Route path="/chro/candidates" element={<CHROCandidates />} />
