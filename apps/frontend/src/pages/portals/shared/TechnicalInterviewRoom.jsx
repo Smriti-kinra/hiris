@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { apiFetch } from '../../../services/api'
 import AppShell from '../../../components/AppShell'
+import { useAuth } from '../../../context/AuthContext'
+import { useToast } from '../../../context/ToastContext'
 
 const TECH_TRAITS = [
   'Problem Solving', 'System Design', 'Coding Ability', 'Technical Depth',
@@ -12,6 +14,11 @@ const TECH_TRAITS = [
 export default function TechnicalInterviewRoom() {
   const { sessionId } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const toast = useToast()
+
+  // Faculty role detection — faculty do NOT have can_make_final_decision
+  const isFaculty = !!(user?.permissions?.can_conduct_interview && !user?.permissions?.can_make_final_decision)
 
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -21,6 +28,8 @@ export default function TechnicalInterviewRoom() {
   const [ratings, setRatings] = useState(TECH_TRAITS.reduce((acc, t) => ({ ...acc, [t]: 5 }), {}))
   const [recommendation, setRecommendation] = useState('neutral')
   const [ending, setEnding] = useState(false)
+  const [savingNotes, setSavingNotes] = useState(false)
+  const [notesSaved, setNotesSaved] = useState(false)
 
   // Audio recording
   const [isRecording, setIsRecording] = useState(false)
@@ -34,7 +43,17 @@ export default function TechnicalInterviewRoom() {
   useEffect(() => {
     apiFetch(`/interviews/${sessionId}`)
       .then(r => r.json())
-      .then(d => { setSession(d); setLoading(false) })
+      .then(d => {
+        setSession(d)
+        setLoading(false)
+        // Load any previously saved notes
+        return apiFetch(`/interviews/${sessionId}/reviewer-notes`).then(r => r.json())
+      })
+      .then(notesData => {
+        if (notesData?.session_notes) {
+          setNotes(notesData.session_notes)
+        }
+      })
       .catch(() => navigate('/'))
   }, [sessionId, navigate])
 
@@ -47,7 +66,7 @@ export default function TechnicalInterviewRoom() {
     transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [transcript])
 
-  // Auto-start recording
+  // Auto-start recording (only if microphone available)
   useEffect(() => {
     if (session && !isRecording && !isStartingRef.current) startRecording()
     return () => {
@@ -115,6 +134,33 @@ export default function TechnicalInterviewRoom() {
     })
   }
 
+  // ── Save Notes (mid-interview, no session end required) ──────────────────
+  const handleSaveNotes = async () => {
+    if (!notes || notes.trim().length === 0) {
+      toast.error('Please write some notes before saving.')
+      return
+    }
+    setSavingNotes(true)
+    try {
+      const res = await apiFetch(`/interviews/${sessionId}/reviewer-notes`, {
+        method: 'POST',
+        body: JSON.stringify({ notes: notes.trim() })
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to save notes')
+      }
+      setNotesSaved(true)
+      toast.success('Notes saved successfully!')
+      setTimeout(() => setNotesSaved(false), 3000)
+    } catch (err) {
+      toast.error(err.message || 'Failed to save notes.')
+    } finally {
+      setSavingNotes(false)
+    }
+  }
+
+  // ── End Interview ─────────────────────────────────────────────────────────
   const handleEndInterview = async () => {
     setEnding(true)
     const traits = Object.entries(ratings).map(([name, score]) => ({ name, score, is_ai: false }))
@@ -140,9 +186,17 @@ export default function TechnicalInterviewRoom() {
         body: JSON.stringify({ duration_secs: timer })
       })
 
-      navigate(`/interview-room/summary/${sessionId}`)
+      // Role-based redirect after ending interview:
+      // Faculty → interview summary (to confirm proceed/reject) — no AI room
+      // Others → standard summary with AI assessment
+      if (isFaculty) {
+        toast.success('Interview ended. Please review and proceed or reject the candidate.')
+        navigate(`/interview-room/summary/${sessionId}`)
+      } else {
+        navigate(`/interview-room/summary/${sessionId}`)
+      }
     } catch (err) {
-      alert('Failed to end interview.')
+      toast.error('Failed to end interview. Please try again.')
       setEnding(false)
     }
   }
@@ -150,10 +204,10 @@ export default function TechnicalInterviewRoom() {
   if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><div className="spinner" /></div>
 
   return (
-    <AppShell portal="faculty" pageTitle={`Technical Interview`}>
+    <AppShell portal={isFaculty ? 'faculty' : 'hiring'} pageTitle={`Technical Interview`}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24, height: 'calc(100vh - 140px)' }}>
 
-        {/* Left Column: Live Room & Transcription */}
+        {/* Left Column: Live Room */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
           {/* Header Card */}
@@ -163,6 +217,11 @@ export default function TechnicalInterviewRoom() {
               <div>
                 <div style={{ fontWeight: 700, fontSize: 16 }}>{session?.candidate_name}</div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{session?.job_title}</div>
+                {isFaculty && (
+                  <div style={{ fontSize: 11, color: 'var(--brand)', fontWeight: 700, marginTop: 2, textTransform: 'uppercase' }}>
+                    Technical Interview — Faculty Review
+                  </div>
+                )}
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -178,34 +237,82 @@ export default function TechnicalInterviewRoom() {
             </div>
           </div>
 
-          {/* Transcript Area */}
-          <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div className="card-pad" style={{ borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontWeight: 700, fontSize: 14 }}>Live Transcript</div>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{transcript.length} entries</span>
-            </div>
-            <div className="card-pad" style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-hover)', display: 'flex', flexDirection: 'column', gap: 12, minHeight: 300 }}>
-              {transcript.length === 0 ? (
-                <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-                  Transcript will appear here once the conversation begins...
-                </div>
-              ) : (
-                transcript.map((m, idx) => (
-                  <div key={idx} style={{ alignSelf: m.speaker === 'Candidate' ? 'flex-start' : 'flex-end', maxWidth: '80%' }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 3, textAlign: m.speaker === 'Candidate' ? 'left' : 'right' }}>{m.speaker}</div>
-                    <div style={{ padding: '10px 14px', borderRadius: 12, background: m.speaker === 'Candidate' ? '#fff' : 'var(--brand)', color: m.speaker === 'Candidate' ? 'var(--text-primary)' : '#fff', fontSize: 13, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-                      {m.text}
-                    </div>
+          {/* Transcript Area — hidden for faculty (no live translation needed) */}
+          {!isFaculty && (
+            <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div className="card-pad" style={{ borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>Live Transcript</div>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{transcript.length} entries</span>
+              </div>
+              <div className="card-pad" style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-hover)', display: 'flex', flexDirection: 'column', gap: 12, minHeight: 300 }}>
+                {transcript.length === 0 ? (
+                  <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                    Transcript will appear here once the conversation begins...
                   </div>
-                ))
-              )}
-              <div ref={transcriptEndRef} />
+                ) : (
+                  transcript.map((m, idx) => (
+                    <div key={idx} style={{ alignSelf: m.speaker === 'Candidate' ? 'flex-start' : 'flex-end', maxWidth: '80%' }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 3, textAlign: m.speaker === 'Candidate' ? 'left' : 'right' }}>{m.speaker}</div>
+                      <div style={{ padding: '10px 14px', borderRadius: 12, background: m.speaker === 'Candidate' ? '#fff' : 'var(--brand)', color: m.speaker === 'Candidate' ? 'var(--text-primary)' : '#fff', fontSize: 13, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                        {m.text}
+                      </div>
+                    </div>
+                  ))
+                )}
+                <div ref={transcriptEndRef} />
+              </div>
+              <div className="card-pad" style={{ borderTop: '1px solid var(--border)', display: 'flex', gap: 10 }}>
+                <input className="hiris-input" placeholder="Candidate says..." onKeyDown={e => { if (e.key === 'Enter' && e.target.value) { handleAddTranscript('Candidate', e.target.value); e.target.value = '' } }} />
+                <input className="hiris-input" placeholder="Your response..." style={{ borderColor: 'var(--brand)' }} onKeyDown={e => { if (e.key === 'Enter' && e.target.value) { handleAddTranscript('Interviewer', e.target.value); e.target.value = '' } }} />
+              </div>
             </div>
-            <div className="card-pad" style={{ borderTop: '1px solid var(--border)', display: 'flex', gap: 10 }}>
-              <input className="hiris-input" placeholder="Candidate says..." onKeyDown={e => { if (e.key === 'Enter' && e.target.value) { handleAddTranscript('Candidate', e.target.value); e.target.value = '' } }} />
-              <input className="hiris-input" placeholder="Your response..." style={{ borderColor: 'var(--brand)' }} onKeyDown={e => { if (e.key === 'Enter' && e.target.value) { handleAddTranscript('Interviewer', e.target.value); e.target.value = '' } }} />
+          )}
+
+          {/* Faculty-only: Interview Notes Panel (replaces transcript inputs) */}
+          {isFaculty && (
+            <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <div className="card-pad" style={{ borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>Interview Notes</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Your observations will be saved to the candidate profile</div>
+                </div>
+                {notesSaved && (
+                  <span style={{ fontSize: 12, color: '#10B981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    Saved
+                  </span>
+                )}
+              </div>
+              <div className="card-pad" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <textarea
+                  className="hiris-input"
+                  rows={10}
+                  value={notes}
+                  onChange={e => { setNotes(e.target.value); setNotesSaved(false) }}
+                  placeholder="Write your observations about the candidate's technical performance, communication, problem-solving approach, etc..."
+                  style={{ flex: 1, resize: 'vertical', minHeight: 200 }}
+                />
+                <button
+                  onClick={handleSaveNotes}
+                  disabled={savingNotes || !notes.trim()}
+                  className="btn btn-outline"
+                  style={{ width: '100%', padding: '10px', fontSize: 13, fontWeight: 600 }}
+                >
+                  {savingNotes ? (
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                      <div className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
+                      Saving Notes...
+                    </span>
+                  ) : (
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                      Save Notes
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Right Column: Evaluation & Panel */}
@@ -229,13 +336,21 @@ export default function TechnicalInterviewRoom() {
             </div>
           </div>
 
-          {/* Notes & Recommendation */}
+          {/* Final Verdict */}
           <div className="card">
             <div className="card-pad" style={{ borderBottom: '1px solid var(--border)' }}>
               <div style={{ fontWeight: 700, fontSize: 14 }}>Final Verdict</div>
+              {isFaculty && (
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                  Your recommendation will be visible to the CHRO
+                </div>
+              )}
             </div>
             <div className="card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <textarea className="hiris-input" rows={4} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Summarize technical performance..." />
+              {/* Only show notes textarea in Final Verdict for non-faculty (faculty has dedicated panel) */}
+              {!isFaculty && (
+                <textarea className="hiris-input" rows={4} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Summarize technical performance..." />
+              )}
               <select className="hiris-input" value={recommendation} onChange={e => setRecommendation(e.target.value)}>
                 <option value="strong_hire">Strong Hire</option>
                 <option value="hire">Hire</option>
@@ -243,8 +358,18 @@ export default function TechnicalInterviewRoom() {
                 <option value="no_hire">No Hire</option>
               </select>
               <button disabled={ending} onClick={handleEndInterview} className="btn btn-primary" style={{ width: '100%', padding: '12px', marginTop: 8 }}>
-                {ending ? 'Ending Session...' : 'End Interview'}
+                {ending ? (
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)', borderTopColor: '#fff' }} />
+                    Ending Session...
+                  </span>
+                ) : 'End Interview'}
               </button>
+              {isFaculty && (
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.5 }}>
+                  After ending, you can review and forward the candidate to the CHRO Final Interview.
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -1,73 +1,303 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../../../components/AppShell'
 import { apiFetch } from '../../../services/api'
+import { useToast } from '../../../context/ToastContext'
 
-const STATUS_BADGE = { scheduled: 'badge-blue', completed: 'badge-green', cancelled: 'badge-red', pending: 'badge-amber' }
+const REC_COLOR = { strong_hire: '#10B981', hire: '#10B981', neutral: '#F59E0B', no_hire: '#EF4444' }
+const REC_LABEL = { strong_hire: 'Strong Hire', hire: 'Hire', neutral: 'Neutral', no_hire: 'No Hire' }
 
 export default function CHROInterviews() {
   const navigate = useNavigate()
-  const [interviews, setInterviews] = useState([])
-  const [loading, setLoading]       = useState(true)
-  const [filter, setFilter]         = useState('all')
+  const toast = useToast()
 
-  useEffect(() => {
-    apiFetch('/interviews?active=true').then(r => r.json()).then(d => setInterviews(Array.isArray(d) ? d : [])).catch(() => setInterviews([])).finally(() => setLoading(false))
+  const [candidates, setCandidates] = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [search, setSearch]         = useState('')
+  const [activeTab, setActiveTab]   = useState('pipeline') // 'pipeline' | 'schedule'
+  const [scheduledInterviews, setScheduledInterviews] = useState([])
+  const [scheduling, setScheduling] = useState(null) // applicationId being scheduled
+
+  // Fetch final-review pipeline candidates
+  const loadPipeline = useCallback(() => {
+    console.log('[CHRO] Fetching final interview pipeline...')
+    setLoading(true)
+    apiFetch('/pipeline/final-interview')
+      .then(r => r.json())
+      .then(d => {
+        console.log(`[CHRO] Found ${Array.isArray(d) ? d.length : 0} candidates in final_review`)
+        setCandidates(Array.isArray(d) ? d : [])
+      })
+      .catch(err => {
+        console.error('[CHRO] Pipeline fetch error:', err)
+        setCandidates([])
+      })
+      .finally(() => setLoading(false))
   }, [])
 
-  const handleStartInterview = async (i) => {
-    // Final-round interviews use the behavioral room.
+  // Fetch existing scheduled interviews
+  const loadScheduled = useCallback(() => {
+    apiFetch('/interviews?active=true')
+      .then(r => r.json())
+      .then(d => setScheduledInterviews(Array.isArray(d) ? d.filter(i => i.status === 'scheduled') : []))
+      .catch(() => setScheduledInterviews([]))
+  }, [])
+
+  useEffect(() => {
+    loadPipeline()
+    loadScheduled()
+  }, [loadPipeline, loadScheduled])
+
+  const handleStartInterview = async (appId) => {
     const type = 'behavioral'
     const res = await apiFetch('/interviews/start', {
       method: 'POST',
-      body: JSON.stringify({ application_id: i.application_id, type })
+      body: JSON.stringify({ application_id: appId, type })
     })
     if (res.ok) {
       const { id } = await res.json()
       navigate(`/interview-room/${type}/${id}`)
+    } else {
+      toast.error('Failed to start interview.')
     }
   }
 
-  const filtered = interviews.filter(i => i.status === 'scheduled')
+  const handleScheduleInterview = async (applicationId) => {
+    setScheduling(applicationId)
+    try {
+      const res = await apiFetch('/pipeline/schedule-final-interview', {
+        method: 'POST',
+        body: JSON.stringify({ application_id: applicationId })
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to schedule')
+      }
+      toast.success('Final interview scheduled successfully!')
+      loadPipeline()
+      loadScheduled()
+    } catch (err) {
+      toast.error(err.message || 'Failed to schedule interview.')
+    } finally {
+      setScheduling(null)
+    }
+  }
+
+  const filtered = candidates.filter(c =>
+    !search ||
+    c.candidate_name?.toLowerCase().includes(search.toLowerCase()) ||
+    (c.job_title || '').toLowerCase().includes(search.toLowerCase()) ||
+    (c.department || '').toLowerCase().includes(search.toLowerCase())
+  )
 
   return (
-    <AppShell portal="chro" pageTitle="Final Interviews">
+    <AppShell portal="chro" pageTitle="Final Interview Pipeline">
       <div className="page-header">
-        <div><div className="page-title">Final Interviews</div><div className="page-subtitle">{filtered.length} upcoming interviews</div></div>
+        <div>
+          <div className="page-title">Final Interview Pipeline</div>
+          <div className="page-subtitle">
+            {candidates.length} candidate{candidates.length !== 1 ? 's' : ''} ready for CHRO final interview
+          </div>
+        </div>
+        <button className="btn btn-outline" onClick={() => { loadPipeline(); loadScheduled(); toast.info('Refreshed') }} style={{ fontSize: 13 }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: 6 }}>
+            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          Refresh
+        </button>
       </div>
-      <div className="card">
-        {loading ? <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><div className="spinner" /></div>
-        : filtered.length === 0 ? <div className="empty-state">No scheduled interviews</div>
-        : (
-          <table className="hiris-table">
-            <thead><tr><th>Candidate</th><th>Role</th><th>Round</th><th>Interviewer</th><th>Scheduled</th><th>Status</th><th>Notes</th></tr></thead>
-            <tbody>
-              {filtered.map(i => (
-                <tr key={i.id}>
-                  <td>
-                    <div style={{ fontWeight: 600, fontSize: 13.5 }}>{i.candidate_name}</div>
-                    <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>{i.candidate_email}</div>
-                  </td>
-                  <td style={{ fontSize: 13, color: 'var(--text-secondary)', maxWidth: 160 }}><div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{i.job_title}</div><div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{i.department}</div></td>
-                  <td style={{ fontSize: 13, fontWeight: 500 }}>{i.round}</td>
-                  <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{i.interviewer_name || '—'}</td>
-                  <td style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{i.scheduled_at ? new Date(i.scheduled_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' }) : '—'}</td>
-                  <td><span className={`badge ${STATUS_BADGE[i.status] || 'badge-gray'}`}>{i.status}</span></td>
-                  <td>
-                    {i.status === 'scheduled' ? (
-                      <button onClick={() => handleStartInterview(i)} className="btn btn-primary" style={{ padding: '6px 12px', fontSize: 12 }}>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 0 }}>
+        {[
+          { key: 'pipeline', label: `Final Interview Pipeline (${candidates.length})` },
+          { key: 'schedule', label: `Scheduled (${scheduledInterviews.length})` },
+        ].map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            style={{
+              padding: '10px 20px', fontSize: 13, fontWeight: 600, border: 'none',
+              background: 'transparent', cursor: 'pointer',
+              borderBottom: activeTab === tab.key ? '2px solid var(--brand)' : '2px solid transparent',
+              color: activeTab === tab.key ? 'var(--brand)' : 'var(--text-secondary)',
+              transition: 'all 0.15s',
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Pipeline Tab */}
+      {activeTab === 'pipeline' && (
+        <div className="card">
+          <div className="card-pad" style={{ borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <input
+              className="hiris-input"
+              placeholder="Search by name, role, or department..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{ maxWidth: 340 }}
+            />
+            <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 'auto' }}>
+              {filtered.length} of {candidates.length} shown
+            </span>
+          </div>
+
+          {loading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><div className="spinner" /></div>
+          ) : filtered.length === 0 ? (
+            <div className="empty-state">
+              <div style={{ marginBottom: 8 }}>No candidates in Final Interview pipeline</div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                Candidates appear here after faculty approve them in the Technical Interview.
+              </div>
+            </div>
+          ) : (
+            <table className="hiris-table">
+              <thead>
+                <tr>
+                  <th>Candidate</th>
+                  <th>Role</th>
+                  <th>Department</th>
+                  <th>Faculty Recommendation</th>
+                  <th>Interview Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(c => (
+                  <tr key={c.application_id}>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div className="avatar" style={{ width: 32, height: 32, fontSize: 12 }}>
+                          {c.candidate_name?.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: 13.5 }}>{c.candidate_name}</div>
+                          <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>{c.candidate_email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ fontSize: 13, color: 'var(--text-secondary)', maxWidth: 180 }}>
+                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.job_title}</div>
+                    </td>
+                    <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{c.department || '—'}</td>
+                    <td>
+                      {c.latest_recommendation ? (
+                        <span style={{
+                          padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+                          background: (REC_COLOR[c.latest_recommendation] || '#94A3B8') + '20',
+                          color: REC_COLOR[c.latest_recommendation] || '#94A3B8',
+                          border: `1px solid ${(REC_COLOR[c.latest_recommendation] || '#94A3B8')}40`,
+                        }}>
+                          {REC_LABEL[c.latest_recommendation] || c.latest_recommendation}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Not set</span>
+                      )}
+                    </td>
+                    <td>
+                      {c.final_interview_status ? (
+                        <span className={`badge ${c.final_interview_status === 'scheduled' ? 'badge-blue' : c.final_interview_status === 'completed' ? 'badge-green' : 'badge-gray'}`}>
+                          {c.final_interview_status}
+                        </span>
+                      ) : (
+                        <span className="badge badge-amber">Not Scheduled</span>
+                      )}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {c.final_interview_status === 'scheduled' ? (
+                          <button
+                            className="btn btn-primary"
+                            style={{ padding: '6px 12px', fontSize: 12 }}
+                            onClick={() => handleStartInterview(c.application_id)}
+                          >
+                            Start Final Interview
+                          </button>
+                        ) : c.final_interview_status !== 'completed' ? (
+                          <button
+                            className="btn btn-outline"
+                            style={{ padding: '6px 12px', fontSize: 12 }}
+                            onClick={() => handleScheduleInterview(c.application_id)}
+                            disabled={scheduling === c.application_id}
+                          >
+                            {scheduling === c.application_id ? 'Scheduling...' : 'Schedule Interview'}
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: 12, color: '#10B981', fontWeight: 600 }}>✓ Completed</span>
+                        )}
+                        <button
+                          className="btn btn-outline"
+                          style={{ padding: '6px 12px', fontSize: 12 }}
+                          onClick={() => navigate(`/chro/candidates/${c.candidate_id}`)}
+                        >
+                          View Profile
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {/* Scheduled Tab */}
+      {activeTab === 'schedule' && (
+        <div className="card">
+          {scheduledInterviews.length === 0 ? (
+            <div className="empty-state">No scheduled interviews</div>
+          ) : (
+            <table className="hiris-table">
+              <thead>
+                <tr>
+                  <th>Candidate</th>
+                  <th>Role</th>
+                  <th>Round</th>
+                  <th>Interviewer</th>
+                  <th>Scheduled</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {scheduledInterviews.map(i => (
+                  <tr key={i.id}>
+                    <td>
+                      <div style={{ fontWeight: 600, fontSize: 13.5 }}>{i.candidate_name}</div>
+                      <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>{i.candidate_email}</div>
+                    </td>
+                    <td style={{ fontSize: 13, color: 'var(--text-secondary)', maxWidth: 160 }}>
+                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{i.job_title}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{i.department}</div>
+                    </td>
+                    <td style={{ fontSize: 13, fontWeight: 500 }}>{i.round}</td>
+                    <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{i.interviewer_name || '—'}</td>
+                    <td style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                      {i.scheduled_at ? new Date(i.scheduled_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: '2-digit' }) : '—'}
+                    </td>
+                    <td><span className="badge badge-blue">{i.status}</span></td>
+                    <td>
+                      <button
+                        onClick={() => handleStartInterview(i.application_id)}
+                        className="btn btn-primary"
+                        style={{ padding: '6px 12px', fontSize: 12 }}
+                      >
                         Start Interview
                       </button>
-                    ) : (
-                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{i.notes || '—'}</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
     </AppShell>
   )
 }

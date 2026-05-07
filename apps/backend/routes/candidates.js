@@ -87,7 +87,6 @@ router.get('/candidates/:id', requireAuth, requirePermission('can_view_candidate
   
   const candidate = rows[0]
   
-  // Also fetch generated behavioral questions
   if (candidate.application_id) {
     const qRes = await query(`SELECT question FROM generated_behavioral_questions WHERE application_id = $1`, [candidate.application_id])
     candidate.generated_behavioral_questions = qRes.rows.map(r => r.question)
@@ -120,17 +119,72 @@ router.get('/jobs/:jobId/candidates', requireAuth, requirePermission('can_view_c
   res.json(rows)
 })
 
-// ─── Update application stage ─────────────────────────────────────────────────
+// ─── Update application stage ──────────────────────────────────────────────
+// KEY FIX: When moving a candidate to 'technical_interview', auto-create
+// an entry in the interviews (schedule) table so faculty can see it.
 router.patch('/candidates/:id/stage', requireAuth, requirePermission('can_move_candidates'), async (req, res) => {
   const { stage } = req.body
   const valid = Object.keys(STAGE_LABEL)
   if (!valid.includes(stage)) return res.status(400).json({ error: 'Invalid stage.' })
-  const { rows } = await query(
-    `UPDATE applications SET stage=$1 WHERE candidate_id=$2 AND org_id=$3 RETURNING id::text, stage`,
-    [stage, req.params.id, req.currentUser.orgId]
-  )
-  if (!rows[0]) return res.status(404).json({ error: 'Application not found.' })
-  res.json(rows[0])
+
+  console.log(`[STAGE] Moving candidate=${req.params.id} to stage=${stage} by user=${req.currentUser.userId}`)
+
+  await query('BEGIN')
+  try {
+    // 1. Update the application stage
+    const { rows } = await query(
+      `UPDATE applications SET stage=$1 WHERE candidate_id=$2 AND org_id=$3
+       RETURNING id::text AS application_id, stage, candidate_id`,
+      [stage, req.params.id, req.currentUser.orgId]
+    )
+    if (!rows[0]) {
+      await query('ROLLBACK')
+      return res.status(404).json({ error: 'Application not found.' })
+    }
+
+    const { application_id, candidate_id } = rows[0]
+
+    // 2. Log stage history for audit trail
+    await query(
+      `INSERT INTO candidate_stage_history (application_id, candidate_id, to_stage, changed_by, notes)
+       VALUES ($1, $2, $3, $4, 'Manual stage update via portal')`,
+      [application_id, candidate_id, stage, req.currentUser.userId]
+    ).catch(err => console.error(`[STAGE] History log failed (non-fatal): ${err.message}`))
+
+    // 3. If moving to technical_interview, auto-create schedule row
+    //    so the candidate appears in Faculty Schedules / Interviews tab
+    if (stage === 'technical_interview') {
+      // Check if a schedule row already exists (avoid duplicates)
+      const { rows: existingRows } = await query(
+        `SELECT id FROM interviews WHERE application_id=$1 AND status='scheduled'`,
+        [application_id]
+      )
+      if (existingRows.length === 0) {
+        const { rows: schedRows } = await query(
+          `INSERT INTO interviews (application_id, interviewer_id, scheduled_at, round, status, notes)
+           VALUES ($1, $2, NOW() + INTERVAL '24 hours', 'Technical Interview', 'scheduled', 'Auto-scheduled on stage advancement')
+           RETURNING id::text`,
+          [application_id, req.currentUser.userId]
+        )
+        console.log(`[STAGE] Auto-created technical interview schedule: id=${schedRows[0]?.id} for application=${application_id}`)
+      } else {
+        console.log(`[STAGE] Schedule already exists for application=${application_id}, skipping auto-create`)
+      }
+    }
+
+    // 4. If moving to final_review, log prominently for CHRO visibility
+    if (stage === 'final_review') {
+      console.log(`[PIPELINE] *** Candidate ${candidate_id} (app ${application_id}) moved to FINAL REVIEW — will appear in CHRO Final Interview tab ***`)
+    }
+
+    await query('COMMIT')
+    console.log(`[STAGE] Successfully moved candidate=${req.params.id} to ${stage}`)
+    res.json({ id: application_id, stage })
+  } catch (err) {
+    await query('ROLLBACK')
+    console.error(`[STAGE] Stage update failed: ${err.message}`)
+    res.status(500).json({ error: 'Failed to update stage.' })
+  }
 })
 
 // ─── Save notes ───────────────────────────────────────────────────────────────

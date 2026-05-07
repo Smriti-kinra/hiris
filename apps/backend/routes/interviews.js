@@ -24,14 +24,15 @@ router.post('/interviews/start', requireAuth, requirePermission('can_conduct_int
     return res.status(400).json({ error: 'Valid application_id and type (technical/behavioral) required.' })
   }
 
-  console.log(`[ROUTING] Starting ${type} interview for application ${application_id}`)
+  console.log(`[INTERVIEW] Starting ${type} interview for application=${application_id} by user=${req.currentUser.userId}`)
 
-  // Also fetch candidate_id for question pre-generation
   const { rows: appRows } = await query(
-    `SELECT candidate_id FROM applications WHERE id=$1 AND org_id=$2`,
+    `SELECT candidate_id, stage FROM applications WHERE id=$1 AND org_id=$2`,
     [application_id, req.currentUser.orgId]
   )
   if (!appRows[0]) return res.status(404).json({ error: 'Application not found.' })
+
+  console.log(`[INTERVIEW] Application stage=${appRows[0].stage}, candidate_id=${appRows[0].candidate_id}`)
 
   const { rows } = await query(
     `INSERT INTO interview_sessions (application_id, interviewer_id, type, status)
@@ -40,14 +41,14 @@ router.post('/interviews/start', requireAuth, requirePermission('can_conduct_int
     [application_id, req.currentUser.userId, type]
   )
 
-  console.log(`[INTERVIEW] Session created: ${rows[0].id}`)
+  console.log(`[INTERVIEW] Session created: id=${rows[0].id} type=${type}`)
   res.status(201).json({ ...rows[0], candidate_id: appRows[0]?.candidate_id })
 })
 
 // ─── Get Interview Session ──────────────────────────────────────────────────
 router.get('/interviews/:id', requireAuth, requireAnyPermission(['can_view_interviews', 'can_conduct_interview']), async (req, res) => {
   const { rows } = await query(
-    `SELECT s.*, c.name AS candidate_name, c.id AS candidate_id, j.title AS job_title, a.id AS app_id
+    `SELECT s.*, c.name AS candidate_name, c.id AS candidate_id, j.title AS job_title, a.id AS app_id, a.stage
      FROM interview_sessions s
      JOIN applications a ON a.id = s.application_id
      JOIN candidates c ON c.id = a.candidate_id
@@ -74,12 +75,100 @@ router.patch('/interviews/:id/transcript', requireAuth, requirePermission('can_c
   res.json({ ok: true })
 })
 
+// ─── Save Reviewer Notes (mid-interview, without ending session) ─────────────
+router.post('/interviews/:id/reviewer-notes', requireAuth, requirePermission('can_conduct_interview'), async (req, res) => {
+  const { notes } = req.body
+
+  if (!notes || typeof notes !== 'string' || notes.trim().length === 0) {
+    return res.status(400).json({ error: 'Notes cannot be empty.' })
+  }
+
+  console.log(`[NOTES] Saving reviewer notes for session=${req.params.id} by user=${req.currentUser.userId}`)
+
+  // 1. Update interviewer_notes on the session itself (for quick access)
+  const { rows: sessionRows } = await query(
+    `UPDATE interview_sessions s
+     SET interviewer_notes = $1
+     FROM applications a
+     WHERE s.application_id = a.id AND s.id = $2 AND a.org_id = $3
+     RETURNING s.id, s.application_id`,
+    [notes.trim(), req.params.id, req.currentUser.orgId]
+  )
+  if (!sessionRows[0]) return res.status(404).json({ error: 'Session not found.' })
+
+  // 2. Upsert into reviewer_notes table for persistent per-reviewer storage
+  const appId = sessionRows[0].application_id
+  const { rows: appRows } = await query(
+    `SELECT a.candidate_id FROM applications a WHERE a.id = $1`,
+    [appId]
+  )
+  const candidateId = appRows[0]?.candidate_id
+
+  // Try to upsert — if row for this session+reviewer exists, update it
+  const existing = await query(
+    `SELECT id FROM reviewer_notes WHERE session_id=$1 AND reviewer_id=$2`,
+    [req.params.id, req.currentUser.userId]
+  )
+  if (existing.rows[0]) {
+    await query(
+      `UPDATE reviewer_notes SET notes=$1, updated_at=NOW() WHERE id=$2`,
+      [notes.trim(), existing.rows[0].id]
+    )
+    console.log(`[NOTES] Updated existing reviewer_notes id=${existing.rows[0].id}`)
+  } else {
+    await query(
+      `INSERT INTO reviewer_notes (session_id, reviewer_id, candidate_id, notes)
+       VALUES ($1, $2, $3, $4)`,
+      [req.params.id, req.currentUser.userId, candidateId, notes.trim()]
+    )
+    console.log(`[NOTES] Created new reviewer_notes for session=${req.params.id}`)
+  }
+
+  // 3. Also update faculty_notes on the application for visibility across portals
+  if (candidateId) {
+    await query(
+      `UPDATE applications SET faculty_notes=$1 WHERE candidate_id=$2 AND org_id=$3`,
+      [notes.trim(), candidateId, req.currentUser.orgId]
+    )
+  }
+
+  res.json({ ok: true, message: 'Notes saved successfully.' })
+})
+
+// ─── Get Reviewer Notes for a session ───────────────────────────────────────
+router.get('/interviews/:id/reviewer-notes', requireAuth, requireAnyPermission(['can_view_interviews', 'can_conduct_interview']), async (req, res) => {
+  console.log(`[NOTES] Fetching reviewer notes for session=${req.params.id}`)
+
+  const { rows } = await query(
+    `SELECT rn.*, u.name AS reviewer_name
+     FROM reviewer_notes rn
+     LEFT JOIN users u ON u.id = rn.reviewer_id
+     WHERE rn.session_id = $1
+     ORDER BY rn.updated_at DESC`,
+    [req.params.id]
+  )
+
+  // Also return the interviewer_notes from the session itself
+  const { rows: sessionRows } = await query(
+    `SELECT s.interviewer_notes
+     FROM interview_sessions s
+     JOIN applications a ON a.id = s.application_id
+     WHERE s.id = $1 AND a.org_id = $2`,
+    [req.params.id, req.currentUser.orgId]
+  )
+
+  res.json({
+    session_notes: sessionRows[0]?.interviewer_notes || null,
+    reviewer_notes: rows
+  })
+})
+
 // ─── Upload Audio Recording + Trigger Whisper Transcription ─────────────────
 router.post('/interviews/:id/audio', requireAuth, requirePermission('can_conduct_interview'), audioUpload.single('audio'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No audio file.' })
 
   const recordingPath = `uploads/recordings/${req.file.filename}`
-  console.log(`[AUDIO] File saved: ${recordingPath} (${(req.file.size / 1024).toFixed(1)} KB)`)
+  console.log(`[AUDIO] File saved: ${recordingPath} (${(req.file.size / 1024).toFixed(1)} KB) for session=${req.params.id}`)
 
   const { rows } = await query(
     `UPDATE interview_sessions s
@@ -96,14 +185,13 @@ router.post('/interviews/:id/audio', requireAuth, requirePermission('can_conduct
   transcribeAudio(absAudioPath)
     .then(async (whisperTranscript) => {
       if (whisperTranscript && whisperTranscript.trim().length > 0) {
-        console.log(`[AUDIO] Whisper transcription completed for session ${req.params.id}`)
+        console.log(`[AUDIO] Whisper transcription completed for session=${req.params.id}`)
         await query(
           `UPDATE interview_sessions SET audio_transcript = $1 WHERE id = $2`,
           [whisperTranscript, req.params.id]
         )
       } else {
-        console.log(`[AUDIO] Whisper unavailable, falling back to live text transcript`)
-        // Fallback: convert the live text transcript to a flat string
+        console.log(`[AUDIO] Whisper unavailable, falling back to live text transcript for session=${req.params.id}`)
         const { rows: session } = await query(
           `SELECT transcript FROM interview_sessions WHERE id=$1`, [req.params.id]
         )
@@ -119,7 +207,6 @@ router.post('/interviews/:id/audio', requireAuth, requirePermission('can_conduct
       }
     })
     .then(() => {
-      // Automatically run AI behavioral grading after transcription is complete
       const aiRouter = require('./ai')
       if (aiRouter.runAIEvaluation) {
         return aiRouter.runAIEvaluation(req.params.id).catch(err => {
@@ -138,7 +225,7 @@ router.post('/interviews/:id/audio', requireAuth, requirePermission('can_conduct
 router.post('/interviews/:id/evaluation', requireAuth, requirePermission('can_conduct_interview'), async (req, res) => {
   const { traits, notes, recommendation } = req.body
 
-  console.log(`[EVAL] Saving evaluation for session ${req.params.id}: ${traits?.length || 0} traits, rec=${recommendation}`)
+  console.log(`[EVAL] Saving evaluation for session=${req.params.id}: ${traits?.length || 0} traits, recommendation=${recommendation}`)
 
   await query('BEGIN')
   try {
@@ -165,11 +252,11 @@ router.post('/interviews/:id/evaluation', requireAuth, requirePermission('can_co
       }
     }
     await query('COMMIT')
-    console.log(`[EVAL] Evaluation saved successfully for session ${req.params.id}`)
+    console.log(`[EVAL] Evaluation saved successfully for session=${req.params.id}`)
     res.json({ ok: true })
   } catch (err) {
     await query('ROLLBACK')
-    console.error(`[EVAL] Save failed: ${err.message}`)
+    console.error(`[EVAL] Save failed for session=${req.params.id}: ${err.message}`)
     res.status(500).json({ error: 'Failed to save evaluation.' })
   }
 })
@@ -177,26 +264,39 @@ router.post('/interviews/:id/evaluation', requireAuth, requirePermission('can_co
 // ─── End Interview Session ──────────────────────────────────────────────────
 router.post('/interviews/:id/end', requireAuth, requirePermission('can_conduct_interview'), async (req, res) => {
   const { duration_secs, ai_summary } = req.body
-  console.log(`[INTERVIEW] Ending session ${req.params.id}, duration=${duration_secs}s`)
+  console.log(`[INTERVIEW] Ending session=${req.params.id}, duration=${duration_secs}s by user=${req.currentUser.userId}`)
 
   const { rows } = await query(
     `UPDATE interview_sessions s
      SET status = 'completed', ended_at = NOW(), duration_secs = $1, ai_summary = $2
      FROM applications a
      WHERE s.application_id = a.id AND s.id = $3 AND a.org_id = $4
-     RETURNING s.id::text, s.status, s.ended_at`,
+     RETURNING s.id::text, s.status, s.ended_at, s.type, s.application_id`,
     [duration_secs, ai_summary || null, req.params.id, req.currentUser.orgId]
   )
   if (!rows[0]) return res.status(404).json({ error: 'Session not found.' })
 
-  console.log(`[INTERVIEW] Session ${req.params.id} marked completed`)
+  // Mark the interview schedule row as completed (if one exists)
+  await query(
+    `UPDATE interviews i
+     SET status = 'completed'
+     FROM applications a
+     WHERE i.application_id = a.id
+       AND a.id = $1
+       AND i.status = 'scheduled'`,
+    [rows[0].application_id]
+  ).catch(err => console.error(`[INTERVIEW] Failed to update schedule status: ${err.message}`))
+
+  console.log(`[INTERVIEW] Session=${req.params.id} marked completed, type=${rows[0].type}`)
   res.json(rows[0])
 })
 
-// ─── Proceed / Reject Candidate ────────────────────────────────────────────
+// ─── Proceed / Reject Candidate ─────────────────────────────────────────────
+// Faculty flow:  technical interview → final_review (CHRO Final Interview)
+// CHRO flow:    behavioral interview → offered
 router.post('/interviews/:id/proceed', requireAuth, requirePermission('can_conduct_interview'), async (req, res) => {
   const { rows: sessions } = await query(
-    `SELECT s.application_id, s.type, a.stage
+    `SELECT s.application_id, s.type, a.stage, a.candidate_id
      FROM interview_sessions s
      JOIN applications a ON a.id = s.application_id
      WHERE s.id = $1 AND a.org_id = $2`,
@@ -204,34 +304,68 @@ router.post('/interviews/:id/proceed', requireAuth, requirePermission('can_condu
   )
   if (!sessions[0]) return res.status(404).json({ error: 'Session not found.' })
 
-  const { application_id, type } = sessions[0]
+  const { application_id, type, stage, candidate_id } = sessions[0]
 
-  // Determine next stage based on current interview type
+  // Determine next stage:
+  // technical interview → final_review (faculty approves → CHRO pipeline)
+  // behavioral interview → offered (CHRO final decision)
   let nextStage
   if (type === 'technical') {
-    nextStage = 'behavioral_interview'
-  } else if (type === 'behavioral') {
     nextStage = 'final_review'
+  } else if (type === 'behavioral') {
+    nextStage = 'offered'
   } else {
     nextStage = 'offered'
   }
 
-  await query(`UPDATE applications SET stage = $1 WHERE id = $2`, [nextStage, application_id])
-  console.log(`[PIPELINE] Application ${application_id} moved to ${nextStage}`)
-  res.json({ ok: true, new_stage: nextStage })
+  console.log(`[PIPELINE] Proceed: application=${application_id}, type=${type}, ${stage} → ${nextStage} by user=${req.currentUser.userId}`)
+
+  await query('BEGIN')
+  try {
+    // Update application stage
+    await query(`UPDATE applications SET stage = $1 WHERE id = $2`, [nextStage, application_id])
+
+    // Log stage change in history
+    await query(
+      `INSERT INTO candidate_stage_history (application_id, candidate_id, from_stage, to_stage, changed_by, notes)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [application_id, candidate_id, stage, nextStage, req.currentUser.userId, `Proceeded after ${type} interview (session ${req.params.id})`]
+    ).catch(err => console.error(`[PIPELINE] Stage history insert failed (non-fatal): ${err.message}`))
+
+    await query('COMMIT')
+    console.log(`[PIPELINE] Application ${application_id} successfully moved to ${nextStage}`)
+    res.json({ ok: true, new_stage: nextStage })
+  } catch (err) {
+    await query('ROLLBACK')
+    console.error(`[PIPELINE] Proceed failed: ${err.message}`)
+    res.status(500).json({ error: 'Failed to proceed candidate.' })
+  }
 })
 
 router.post('/interviews/:id/reject', requireAuth, requirePermission('can_conduct_interview'), async (req, res) => {
   const { rows: sessions } = await query(
-    `SELECT s.application_id
+    `SELECT s.application_id, a.stage, a.candidate_id
      FROM interview_sessions s
      JOIN applications a ON a.id = s.application_id
-     WHERE s.id = $1 AND a.org_id = $2`, [req.params.id, req.currentUser.orgId]
+     WHERE s.id = $1 AND a.org_id = $2`,
+    [req.params.id, req.currentUser.orgId]
   )
   if (!sessions[0]) return res.status(404).json({ error: 'Session not found.' })
 
-  await query(`UPDATE applications SET stage = 'rejected' WHERE id = $1`, [sessions[0].application_id])
-  console.log(`[PIPELINE] Application ${sessions[0].application_id} REJECTED`)
+  const { application_id, stage, candidate_id } = sessions[0]
+
+  console.log(`[PIPELINE] Reject: application=${application_id}, ${stage} → rejected by user=${req.currentUser.userId}`)
+
+  await query(`UPDATE applications SET stage = 'rejected' WHERE id = $1`, [application_id])
+
+  // Log stage history
+  await query(
+    `INSERT INTO candidate_stage_history (application_id, candidate_id, from_stage, to_stage, changed_by, notes)
+     VALUES ($1, $2, $3, 'rejected', $4, 'Rejected after interview')`,
+    [application_id, candidate_id, stage, req.currentUser.userId]
+  ).catch(() => {})
+
+  console.log(`[PIPELINE] Application ${application_id} REJECTED`)
   res.json({ ok: true, new_stage: 'rejected' })
 })
 
