@@ -174,11 +174,13 @@ export default function PricingPage() {
       </section>
 
       {/* ── CTA ── */}
-      <section style={{ background: 'var(--navy)', padding: '72px 0', textAlign: 'center' }}>
+      <section style={{ background: 'var(--teal)', padding: '80px 0', textAlign: 'center' }}>
         <div className="container">
-          <h2 style={{ color: 'white', marginBottom: 16 }}>Still have questions?</h2>
-          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 15, marginBottom: 32 }}>Talk to our team about the right plan for your organisation.</p>
-          <Link to="/login" className="btn-white">Get Started Free</Link>
+          <h2 style={{ color: 'white', marginBottom: 16, fontSize: '2.2rem' }}>Still have questions?</h2>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 16, marginBottom: 36, maxWidth: 480, margin: '0 auto' }}>
+            Talk to our team about the right plan for your organisation.
+          </p>
+          <Link to="/login" className="btn-white" style={{ fontSize: 15 }}>Get Started Free</Link>
         </div>
       </section>
 

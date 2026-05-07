@@ -2,7 +2,7 @@
 # ─── HIRIS — start backend + unified frontend ─────────────────────────
 set -e
 
-ROOT="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BACKEND="$ROOT/apps/backend"
 FRONTEND="$ROOT/apps/frontend"
 
