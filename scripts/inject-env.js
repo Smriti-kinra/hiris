@@ -75,6 +75,14 @@ const baseLines   = [
   `VITE_API_ORIGIN=${backendUrl}`,
   `VITE_ASSET_BASE_URL=`,
   `VITE_DEV_PORT=${landingPort}`,
+  ``,
+  `# Cross-portal redirect URLs`,
+  `VITE_PORTAL_URL_LANDING=${url('landing')}`,
+  `VITE_PORTAL_URL_FACULTY=${url('faculty')}`,
+  `VITE_PORTAL_URL_HIRING=${url('hiring')}`,
+  `VITE_PORTAL_URL_CHRO=${url('chro')}`,
+  `VITE_PORTAL_URL_RECRUITER=${url('recruiter')}`,
+  `VITE_PORTAL_URL_CANDIDATE=${url('candidate')}`,
 ]
 fs.writeFileSync(baseEnvFile, baseLines.join('\n') + '\n')
 console.log(`[inject-env] Wrote apps/frontend/.env  (port ${landingPort})`)

@@ -8,7 +8,6 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import PortalGuard from '../../components/PortalGuard'
 import ProtectedRoute from '../../components/ProtectedRoute'
 
-const LoginPage         = lazy(() => import('../../pages/auth/LoginPage'))
 const HiringDashboard   = lazy(() => import('../../pages/portals/hiring/Dashboard'))
 const HiringRequests    = lazy(() => import('../../pages/portals/hiring/Requests'))
 const HiringCandidates  = lazy(() => import('../../pages/portals/hiring/Candidates'))
@@ -27,7 +26,6 @@ export default function HiringRoutes() {
   return (
     <Suspense fallback={<Loading />}>
       <Routes>
-        <Route path="/login" element={<LoginPage />} />
 
         <Route element={<PortalGuard portalId="hiring" />}>
           <Route element={<ProtectedRoute requiredAny={['can_view_requests','can_view_jobs','can_view_candidates']} />}>

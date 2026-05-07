@@ -9,7 +9,6 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import PortalGuard from '../../components/PortalGuard'
 import ProtectedRoute from '../../components/ProtectedRoute'
 
-const LoginPage              = lazy(() => import('../../pages/auth/LoginPage'))
 const FacultyDashboard       = lazy(() => import('../../pages/portals/faculty/Dashboard'))
 const FacultyRequests        = lazy(() => import('../../pages/portals/faculty/Requests'))
 const FacultyJDReviews       = lazy(() => import('../../pages/portals/faculty/JDReviews'))
@@ -25,7 +24,6 @@ export default function FacultyRoutes() {
     <Suspense fallback={<Loading />}>
       <Routes>
         {/* Public */}
-        <Route path="/login" element={<LoginPage />} />
 
         {/* Faculty-guarded routes — redirects non-faculty to their correct portal */}
         <Route element={<PortalGuard portalId="faculty" />}>
