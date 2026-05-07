@@ -24,13 +24,27 @@ if [ ! -d "$FRONTEND/node_modules" ]; then
   cd "$FRONTEND" && npm install
 fi
 
-# ── 4. Start backend ─────────────────────────────────────────────────
-echo "→ Starting backend on :3001"
+# ── 4. Validate backend environment ───────────────────────────────────
+if [ ! -f "$BACKEND/.env" ] && [ -z "$DATABASE_URL" -o -z "$JWT_SECRET" ]; then
+  printf '\n[FATAL] Missing backend environment configuration.\n'
+  printf 'Copy backend/.env.example to backend/.env and set DATABASE_URL and JWT_SECRET.\n'
+  exit 1
+fi
+
+# ── 5. Run database migrations + seed demo passwords ───────────────────
+echo "→ Running database migrations"
 cd "$BACKEND"
+npm run migrate
+
+echo "→ Seeding demo passwords"
+npm run seed:passwords
+
+# ── 6. Start backend ─────────────────────────────────────────────────
+echo "→ Starting backend on :3001"
 npm run dev &
 BACKEND_PID=$!
 
-# ── 5. Start unified frontend ─────────────────────────────────────────
+# ── 7. Start unified frontend ─────────────────────────────────────────
 echo "→ Starting HIRIS unified app on :5176"
 cd "$FRONTEND"
 npm run dev &
