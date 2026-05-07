@@ -19,7 +19,14 @@ export default function ProtectedRoute({ requiredPermission, requiredAny = [] })
     )
   }
 
-  if (!user) return <Navigate to="/login" replace />
+  if (!user) {
+    const landingUrl = import.meta.env.VITE_PORTAL_URL_LANDING || 'http://localhost:5173'
+    if (window.location.origin !== landingUrl) {
+      window.location.href = landingUrl + '/login'
+      return null
+    }
+    return <Navigate to="/login" replace />
+  }
 
   if (requiredPermission && !hasPermission(user, requiredPermission)) {
     return <Navigate to={user.home_path || '/dashboard'} replace />

@@ -52,8 +52,15 @@ export default function PortalGuard({ portalId }) {
     )
   }
 
-  // Not authenticated → go to login on this portal (each portal has its own /login)
-  if (!user) return <Navigate to="/login" replace />
+  // Not authenticated → go to the centralized landing page login
+  if (!user) {
+    const landingUrl = import.meta.env.VITE_PORTAL_URL_LANDING || 'http://localhost:5173'
+    if (window.location.origin !== landingUrl) {
+      window.location.href = landingUrl + '/login'
+      return null
+    }
+    return <Navigate to="/login" replace />
+  }
 
   // Admin bypass — admins can access any portal
   if (user.permissions?.is_admin) return <Outlet />
