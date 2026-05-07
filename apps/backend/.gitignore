@@ -1,5 +1,6 @@
 .env
 pgdata/
 logfile
+uploads/recordings/
 *.log
 node_modules/

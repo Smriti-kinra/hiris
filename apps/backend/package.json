@@ -1,5 +1,5 @@
 {
-  "name": "backend",
+  "name": "@hiris/backend",
   "version": "1.0.0",
   "description": "HIRIS API — Node/Express backend",
   "main": "server.js",

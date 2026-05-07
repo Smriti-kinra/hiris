@@ -2,9 +2,9 @@
 # ─── HIRIS — start backend + unified frontend ─────────────────────────
 set -e
 
-ROOT="$(cd "$(dirname "$0")" && pwd)"
-BACKEND="$ROOT/backend"
-FRONTEND="$ROOT/hiris-unified"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+BACKEND="$ROOT/apps/backend"
+FRONTEND="$ROOT/apps/frontend"
 
 # ── 1. Kill any lingering processes on our ports ─────────────────────
 echo "→ Clearing ports 3001, 5176…"
@@ -44,8 +44,8 @@ echo "→ Starting backend on :3001"
 npm run dev &
 BACKEND_PID=$!
 
-# ── 7. Start unified frontend ─────────────────────────────────────────
-echo "→ Starting HIRIS unified app on :5176"
+# ── 7. Start frontend ─────────────────────────────────────────
+echo "→ Starting HIRIS frontend app on :5176"
 cd "$FRONTEND"
 npm run dev &
 FRONTEND_PID=$!

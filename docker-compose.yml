@@ -26,7 +26,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       # Mounts 000_schema.sql so postgres auto-initialises on first run
-      - ./backend/migrations/000_schema.sql:/docker-entrypoint-initdb.d/000_schema.sql:ro
+      - ./apps/backend/migrations/000_schema.sql:/docker-entrypoint-initdb.d/000_schema.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U hiris_admin -d hiris_db"]
       interval: 5s
@@ -35,7 +35,7 @@ services:
 
   backend:
     build:
-      context: ./backend
+      context: ./apps/backend
     container_name: hiris-backend
     ports:
       - "3001:3001"
@@ -53,7 +53,7 @@ services:
 
   frontend:
     build:
-      context: ./hiris-unified
+      context: ./apps/frontend
     container_name: hiris-frontend
     ports:
       - "8080:80"

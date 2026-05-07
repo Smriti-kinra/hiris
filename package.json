@@ -1,10 +1,14 @@
 {
   "name": "hiris",
+  "private": true,
   "version": "1.0.0",
-  "description": "HIRIS is a full-stack web application designed for organization-wide hiring management. It provides dedicated portals for Hiring Managers, Faculty, and the CHRO to seamlessly submit headcount requests, review candidates, and schedule final interviews.",
-  "main": "index.js",
+  "description": "HIRIS is a full-stack hiring platform with role-based portals for CHRO, Hiring Managers, and Faculty.",
+  "workspaces": ["apps/*", "packages/*"],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "bootstrap": "npm install",
+    "build": "npm --workspaces run build",
+    "test": "npm --workspaces test",
+    "start": "npm --workspace @hiris/backend start"
   },
   "repository": {
     "type": "git",
@@ -13,15 +17,8 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/Smriti-kinra/hiris/issues"
   },
-  "homepage": "https://github.com/Smriti-kinra/hiris#readme",
-  "dependencies": {
-    "@opentelemetry/api": "^1.9.1",
-    "@opentelemetry/context-async-hooks": "^2.7.1",
-    "@opentelemetry/instrumentation": "^0.216.0",
-    "@opentelemetry/semantic-conventions": "^1.40.0"
-  }
+  "homepage": "https://github.com/Smriti-kinra/hiris#readme"
 }

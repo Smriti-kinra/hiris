@@ -12,8 +12,11 @@ HIRIS is a full-stack web application designed for organization-wide hiring mana
 
 ## Project Structure
 
-*   `/backend` — The Express.js API server and PostgreSQL connection logic.
-*   `/hiris-unified` — The Vite + React SPA containing the three user portals.
+*   `/apps/backend` — The Express.js API server, database migrations, routes, and backend services.
+*   `/apps/frontend` — The Vite + React SPA containing the hiring, faculty, and CHRO portals.
+*   `/packages/evaluation` — Evaluation scripts and AI implementation utility code.
+*   `/docs` — Product docs and platform feature overview.
+*   `/scripts` — Local launch scripts and environment helpers.
 
 ## Prerequisites
 
@@ -23,15 +26,19 @@ HIRIS is a full-stack web application designed for organization-wide hiring mana
 
 ## Local Development Setup
 
-The easiest way to run the application locally is using the provided shell script. This will start the database seed/migration process, boot the backend server, and start the Vite dev server concurrently.
+The easiest way to run the application locally is using the provided shell script or the npm workspace bootstrap.
 
 1.  Ensure you have PostgreSQL running locally with a database named `hiris_db` and user `postgres`.
 2.  Clone the repository.
-3.  Run the local start script:
+3.  Install workspace dependencies from the repo root:
     ```bash
-    bash start_all.sh
+    npm install
     ```
-4.  The application will be available at `http://localhost:5176`.
+4.  Run the local start script:
+    ```bash
+    bash scripts/start_all.sh
+    ```
+5.  The application will be available at `http://localhost:5176`.
 
 ### Demo Accounts
 
@@ -44,7 +51,7 @@ The database is seeded with the following accounts (Password for all: `hiris2026
 
 The application is containerized and ready for production deployment using Docker Compose.
 
-1.  Copy `.env.example` to `.env` in the `backend/` directory and update the variables (especially `JWT_SECRET` and `DATABASE_URL`).
+1.  Copy `.env.example` to `.env` in the `apps/backend/` directory and update the variables (especially `JWT_SECRET` and `DATABASE_URL`).
 2.  Build and start the containers:
     ```bash
     docker-compose up -d --build
