@@ -13,14 +13,45 @@ export default function PostedJobs() {
   const navigate = useNavigate()
   const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(true)
+  const [copyingId, setCopyingId] = useState(null)
 
-  useEffect(() => {
+  const loadJobs = () => {
     apiFetch('/jobs')
       .then(r => r.json())
       .then(d => setJobs(Array.isArray(d) ? d.filter(j => j.status === 'active') : []))
       .catch(() => setJobs([]))
       .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    loadJobs()
   }, [])
+
+  const handleCopyLink = async (e, job) => {
+    e.stopPropagation()
+    setCopyingId(job.id)
+    try {
+      let token = job.public_token
+      if (!token) {
+        const res = await apiFetch(`/jobs/${job.id}/post`, { method: 'POST' })
+        const data = await res.json()
+        if (data.token) {
+          token = data.token
+          loadJobs()
+        }
+      }
+      if (token) {
+        const link = `${window.location.origin}/jobs/apply/${token}`
+        await navigator.clipboard.writeText(link)
+        alert('Application link copied to clipboard!')
+      }
+    } catch (err) {
+      console.error('Copy link failed', err)
+      alert('Failed to copy link')
+    } finally {
+      setCopyingId(null)
+    }
+  }
 
   return (
     <AppShell portal="hiring" pageTitle="Posted Jobs">
@@ -116,20 +147,29 @@ export default function PostedJobs() {
                       </div>
                     </div>
                     
-                    <div style={{ 
-                      width: 32, 
-                      height: 32, 
-                      borderRadius: '50%', 
-                      background: 'var(--bg-hover)', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      color: 'var(--text-muted)'
-                    }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                    <button 
+                      onClick={(e) => handleCopyLink(e, j)}
+                      disabled={copyingId === j.id}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: 6,
+                        background: 'var(--bg-base)',
+                        border: '1px solid var(--border)',
+                        color: 'var(--text-primary)',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: copyingId === j.id ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6
+                      }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                       </svg>
-                    </div>
+                      {copyingId === j.id ? 'Wait...' : 'Copy Link'}
+                    </button>
                   </div>
                 </div>
               </div>

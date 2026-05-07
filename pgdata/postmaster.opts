@@ -1,1 +1,1 @@
-C:/Program Files/PostgreSQL/18/bin/postgres.exe "-D" "pgdata" "-p" "5433"
+C:/Program Files/PostgreSQL/18/bin/postgres.exe "-D" "C:/Users/Sartajdeep Singh/OneDrive/Desktop/aiprod_final/hiris/pgdata" "-p" "5433"

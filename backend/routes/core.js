@@ -126,10 +126,12 @@ router.get('/jobs', requireAuth, async (req, res) => {
   const queryStr = `
     SELECT j.id::text AS id, j.title, j.department, j.status, j.job_type,
       COALESCE(j.urgency,'medium') AS urgency, j.description, j.posted_at,
-      u.name AS manager, COUNT(a.id)::int AS candidates_count
+      u.name AS manager, COUNT(a.id)::int AS candidates_count,
+      pjl.token AS public_token
     FROM jobs j LEFT JOIN users u ON u.id=j.manager_id
     LEFT JOIN applications a ON a.job_id=j.id
-    GROUP BY j.id,j.title,j.department,j.status,j.job_type,j.urgency,j.description,j.posted_at,u.name
+    LEFT JOIN public_job_links pjl ON pjl.job_id = j.id AND pjl.active = true
+    GROUP BY j.id,j.title,j.department,j.status,j.job_type,j.urgency,j.description,j.posted_at,u.name,pjl.token
     ORDER BY j.posted_at DESC
     ${page ? 'LIMIT $1 OFFSET $2' : ''}`
 

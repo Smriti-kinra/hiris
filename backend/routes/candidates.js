@@ -57,11 +57,11 @@ router.get('/candidates/:id', requireAuth, async (req, res) => {
     SELECT
       c.id::text                   AS id,
       c.name, c.email, c.phone, c.headline, c.location,
-      c.resume_url, c.resume_path, c.cv_path,
+      a.resume_file_id             AS resume_path, 
+      a.cv_file_id                 AS cv_path,
       COALESCE(c.source,'Direct')  AS source,
       c.ai_score                   AS score,
       c.education, c.experience, c.skills,
-      c.ai_summary, c.chatbot_transcript, c.custom_answers,
       c.created_at,
       j.title                      AS role,
       j.department,
@@ -70,15 +70,30 @@ router.get('/candidates/:id', requireAuth, async (req, res) => {
       a.applied_at,
       a.notes                      AS application_notes,
       a.manager_notes, a.faculty_notes, a.eval_scores,
+      a.application_answers        AS custom_answers,
+      a.ai_chat_answers            AS chatbot_transcript,
+      cs.summary_text              AS ai_summary,
       ${stageCase}                 AS stage,
       a.stage                      AS stage_raw
     FROM candidates c
     LEFT JOIN applications a ON a.candidate_id = c.id
     LEFT JOIN jobs         j ON j.id = a.job_id
+    LEFT JOIN candidate_summaries cs ON cs.application_id = a.id
     WHERE c.id = $1
   `, [req.params.id])
   if (!rows[0]) return res.status(404).json({ error: 'Candidate not found.' })
-  res.json(rows[0])
+  
+  const candidate = rows[0]
+  
+  // Also fetch generated behavioral questions
+  if (candidate.application_id) {
+    const qRes = await query(`SELECT question FROM generated_behavioral_questions WHERE application_id = $1`, [candidate.application_id])
+    candidate.generated_behavioral_questions = qRes.rows.map(r => r.question)
+  } else {
+    candidate.generated_behavioral_questions = []
+  }
+  
+  res.json(candidate)
 })
 
 // ─── Candidates for a specific job (filtered by role stages) ───────────────

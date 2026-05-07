@@ -82,6 +82,7 @@ app.use('/api',       require('./routes/assistant'))
 app.use('/api',       require('./routes/chro'))
 app.use('/api',       require('./routes/candidates'))
 app.use('/api',       require('./routes/interviews'))
+app.use('/api',       require('./routes/job_portal'))
 app.use('/api/ai',    require('./routes/ai'))
 
 /** @swagger

@@ -9,6 +9,8 @@ const PricingPage = lazy(() => import('../pages/landing/PricingPage'))
 const OrgSignup = lazy(() => import('../pages/onboarding/OrgSignup'))
 const RoleManagement = lazy(() => import('../pages/settings/roles/RoleManagement'))
 
+const CandidateJobPortal = lazy(() => import('../pages/public/CandidateJobPortal'))
+
 const HiringDashboard = lazy(() => import('../pages/portals/hiring/Dashboard'))
 const HiringRequests = lazy(() => import('../pages/portals/hiring/Requests'))
 const HiringCandidates = lazy(() => import('../pages/portals/hiring/Candidates'))
@@ -61,6 +63,7 @@ export default function AppRoutes() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/onboarding" element={<OrgSignup />} />
         <Route path="/signup" element={<OrgSignup />} />
+        <Route path="/jobs/apply/:token" element={<CandidateJobPortal />} />
 
         <Route element={<ProtectedRoute allowedPortal="hiring" />}>
           <Route path="/hiring" element={<HiringDashboard />} />

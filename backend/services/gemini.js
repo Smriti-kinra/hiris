@@ -180,4 +180,36 @@ Return a JSON object (no markdown, no code fences) with this exact structure:
   }
 }
 
-module.exports = { generateBehavioralQuestions, evaluateBehavioralInterview }
+/**
+ * Generate candidate application summary
+ */
+async function generateApplicationSummary(resumeText, cvText, chatAnswers, candidateName) {
+  console.log(`[GEMINI] Generating application summary for: ${candidateName}`)
+  const prompt = `You are an expert HR evaluator.
+
+Candidate Name: ${candidateName}
+
+Candidate Resume:
+${resumeText || 'No resume provided.'}
+
+Candidate CV:
+${cvText || 'No CV provided.'}
+
+Candidate Application/AI Chat Answers:
+${JSON.stringify(chatAnswers, null, 2)}
+
+Provide a detailed summary of this application, including:
+- candidate overview
+- motivations
+- strengths
+- institutional alignment indicators
+- communication indicators
+- overall impression
+
+Return ONLY plain text or simple markdown formatting. Do not wrap in JSON.`
+  
+  const result = await generateWithFallback(prompt)
+  return result.response.text().trim()
+}
+
+module.exports = { generateBehavioralQuestions, evaluateBehavioralInterview, generateApplicationSummary }

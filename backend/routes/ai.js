@@ -99,12 +99,25 @@ router.post('/generate-behavioral-questions', requireAuth, async (req, res) => {
 // ─── Get Cached Questions for a Candidate ───────────────────────────────────
 router.get('/candidates/:id/questions', requireAuth, async (req, res) => {
   console.log(`[AI] Fetching cached questions for candidate ${req.params.id}`)
+  
+  // First try the new table
+  const newTableRes = await query(
+    `SELECT question FROM generated_behavioral_questions WHERE candidate_id=$1`,
+    [req.params.id]
+  )
+  if (newTableRes.rows.length > 0) {
+    const questions = newTableRes.rows.map(r => r.question)
+    console.log(`[AI] Found ${questions.length} questions in generated_behavioral_questions`)
+    return res.json({ questions })
+  }
+
+  // Fallback to legacy
   const { rows } = await query(
     `SELECT questions, generated_at FROM candidate_questions WHERE candidate_id=$1 AND interview_type='behavioral' ORDER BY generated_at DESC LIMIT 1`,
     [req.params.id]
   )
   if (rows[0]) {
-    console.log(`[AI] Found ${rows[0].questions?.length || 0} cached questions`)
+    console.log(`[AI] Found ${rows[0].questions?.length || 0} cached questions in legacy table`)
   } else {
     console.log(`[AI] No cached questions found for candidate ${req.params.id}`)
   }

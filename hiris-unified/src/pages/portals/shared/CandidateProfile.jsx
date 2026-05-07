@@ -108,6 +108,7 @@ export default function CandidateProfile() {
   const transcript = candidate?.chatbot_transcript || []
   const answers = candidate?.custom_answers || []
   const evalScores = candidate?.eval_scores || {}
+  const generatedQuestions = candidate?.generated_behavioral_questions || []
   const currentStageIdx = STAGE_FLOW.indexOf(candidate?.stage_raw || 'applied')
 
   if (loading) return (
@@ -202,13 +203,13 @@ export default function CandidateProfile() {
             <div className="card-pad">
               <div style={{ fontWeight: 700, fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 12 }}>Documents</div>
               {candidate.resume_path && (
-                <a href={`http://localhost:3001/${candidate.resume_path}`} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: 'var(--bg-hover)', borderRadius: 8, marginBottom: 8, textDecoration: 'none', color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, border: '1px solid var(--border)' }}>
+                <a href={`http://localhost:3001/${candidate.resume_path.startsWith('uploads') ? candidate.resume_path : `uploads/${candidate.resume_path}`}`} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: 'var(--bg-hover)', borderRadius: 8, marginBottom: 8, textDecoration: 'none', color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, border: '1px solid var(--border)' }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                   Resume
                 </a>
               )}
               {candidate.cv_path && (
-                <a href={`http://localhost:3001/${candidate.cv_path}`} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: 'var(--bg-hover)', borderRadius: 8, textDecoration: 'none', color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, border: '1px solid var(--border)' }}>
+                <a href={`http://localhost:3001/${candidate.cv_path.startsWith('uploads') ? candidate.cv_path : `uploads/${candidate.cv_path}`}`} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: 'var(--bg-hover)', borderRadius: 8, textDecoration: 'none', color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, border: '1px solid var(--border)' }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                   Curriculum Vitae
                 </a>
@@ -341,23 +342,36 @@ export default function CandidateProfile() {
 
           {/* Chatbot Transcript */}
           {transcript.length > 0 && (
-            <SectionCard icon="💬" title="AI Chatbot Transcript">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {transcript.map((msg, i) => {
-                  const isBot = msg.speaker === 'Bot'
-                  return (
-                    <div key={i} style={{ display: 'flex', justifyContent: isBot ? 'flex-start' : 'flex-end' }}>
-                      <div style={{
-                        maxWidth: '75%', padding: '10px 14px', borderRadius: isBot ? '4px 16px 16px 16px' : '16px 4px 16px 16px',
-                        background: isBot ? 'var(--bg-input)' : 'var(--brand)', color: isBot ? 'var(--text-primary)' : 'white',
-                        fontSize: 13, lineHeight: 1.6
-                      }}>
-                        <div style={{ fontSize: 10, fontWeight: 700, opacity: 0.6, marginBottom: 4 }}>{msg.speaker}</div>
-                        {msg.text}
-                      </div>
+            <SectionCard icon="💬" title="AI Pre-Screening Chat">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {transcript.map((msg, i) => (
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ alignSelf: 'flex-start', background: 'var(--bg-input)', color: 'var(--text-primary)', padding: '10px 14px', borderRadius: '4px 16px 16px 16px', fontSize: 13, lineHeight: 1.6, maxWidth: '85%' }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, opacity: 0.6, marginBottom: 4 }}>Bot</div>
+                      {msg.question}
                     </div>
-                  )
-                })}
+                    <div style={{ alignSelf: 'flex-end', background: 'var(--brand)', color: 'white', padding: '10px 14px', borderRadius: '16px 4px 16px 16px', fontSize: 13, lineHeight: 1.6, maxWidth: '85%' }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, opacity: 0.6, marginBottom: 4 }}>Candidate</div>
+                      {msg.answer}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+          )}
+
+          {/* Generated Questions */}
+          {generatedQuestions.length > 0 && (
+            <SectionCard icon="💡" title="Generated Behavioral Questions">
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
+                These questions were generated contextually based on the candidate's resume, CV, and AI chat answers.
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {generatedQuestions.map((q, i) => (
+                  <div key={i} style={{ padding: 12, background: 'var(--bg-hover)', borderRadius: 8, fontSize: 13, color: 'var(--text-primary)', border: '1px solid var(--border)' }}>
+                    <span style={{ fontWeight: 700, color: 'var(--brand)', marginRight: 6 }}>Q{i+1}.</span> {q}
+                  </div>
+                ))}
               </div>
             </SectionCard>
           )}
