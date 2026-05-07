@@ -3,11 +3,13 @@ import AppShell from '../../../components/AppShell'
 import { apiFetch } from '../../../services/api'
 import ApproveRejectModal from '../../../components/ApproveRejectModal'
 import { useToast } from '../../../context/ToastContext'
+import { useAuth } from '../../../context/AuthContext'
 
 const DEPT_COLORS = ['var(--accent-blue)', 'var(--accent-green)', 'var(--accent-amber)', 'var(--accent-purple)', 'var(--brand)', 'var(--accent-red)']
 
 export default function CHRODashboard() {
   const toast = useToast()
+  const { user } = useAuth()
   const [stats, setStats]       = useState(null)
   const [requests, setRequests] = useState([])
   const [openings, setOpenings] = useState([])
@@ -80,7 +82,7 @@ export default function CHRODashboard() {
         <>
           <div className="page-header">
             <div>
-              <div className="page-title">Hiring Intelligence</div>
+              <div className="page-title">Welcome, {user?.name}</div>
               <div className="page-subtitle">Organisation-wide hiring overview and analytics.</div>
             </div>
             <button className="btn btn-outline" onClick={exportCSV}>Export Report</button>

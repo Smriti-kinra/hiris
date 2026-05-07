@@ -48,12 +48,26 @@ app.use(Sentry.Handlers.requestHandler())
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }))
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'))
 
+function isAllowedCorsOrigin(origin) {
+  if (!origin) return true
+
+  const configuredOrigins = (process.env.FRONTEND_URL || '')
+    .split(',')
+    .map(value => value.trim())
+    .filter(Boolean)
+
+  if (configuredOrigins.includes(origin)) return true
+
+  if (process.env.NODE_ENV !== 'production') {
+    return /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+  }
+
+  return false
+}
+
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true)
-    const allowedOrigin = process.env.FRONTEND_URL
-    if (allowedOrigin && origin === allowedOrigin) return cb(null, true)
-    if (process.env.NODE_ENV !== 'production' && /^http:\/\/localhost(:\d+)?$/.test(origin)) return cb(null, true)
+    if (isAllowedCorsOrigin(origin)) return cb(null, true)
     const error = new Error('Not allowed by CORS'); error.status = 403; cb(error)
   },
   credentials: true,

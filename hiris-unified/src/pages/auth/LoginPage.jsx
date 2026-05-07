@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Navbar from '../../components/layout/Navbar'
 import { useAuth } from '../../context/AuthContext'
+import hirisLogo from '../../assets/hiris-logo.svg'
 
 const DEMO_ACCOUNTS = [
   { email: 'smriti.kinra@hiris.demo', role: 'CHRO', label: 'Smriti Kinra' },
@@ -74,8 +75,8 @@ export default function LoginPage() {
         <div style={{ width: '100%', maxWidth: 430, padding: '0 24px' }}>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '36px', boxShadow: 'var(--shadow-md)' }}>
             <div style={{ marginBottom: 28 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--teal)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-                <span style={{ color: 'white', fontWeight: 900, fontSize: 18, fontFamily: 'var(--font-h)' }}>H</span>
+              <div className="auth-logo-wrap">
+                <img className="auth-logo-img" src={hirisLogo} alt="HIRIS" />
               </div>
               <h1 style={{ fontSize: '1.4rem', marginBottom: 6 }}>Sign in to HIRIS</h1>
               <p style={{ fontSize: 13, color: 'var(--slate-500)', lineHeight: 1.6 }}>

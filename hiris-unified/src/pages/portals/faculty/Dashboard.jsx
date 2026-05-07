@@ -46,7 +46,7 @@ export default function FacultyDashboard() {
         <>
           <div className="page-header">
             <div>
-              <div className="page-title">Welcome, {user?.name?.split(' ')[0]}!</div>
+              <div className="page-title">Welcome, {user?.name}</div>
               <div className="page-subtitle">Review your hiring requests, JDs, and candidate profiles below.</div>
             </div>
             <button className="btn btn-primary" onClick={() => setModal(true)}>

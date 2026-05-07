@@ -1,5 +1,6 @@
 import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import hirisLogo from '../../assets/hiris-logo.svg'
 
 export default function Navbar() {
   const { user, theme, toggleTheme } = useAuth()
@@ -8,8 +9,9 @@ export default function Navbar() {
     <header className="landing-nav">
       <div className="landing-nav-inner">
         <Link to="/" className="landing-brand" aria-label="HIRIS home">
-          <span className="landing-brand-mark">H</span>
-          <span>HIRIS</span>
+          <span className="landing-brand-logo-wrap">
+            <img className="landing-brand-logo" src={hirisLogo} alt="HIRIS" />
+          </span>
         </Link>
 
         <nav className="landing-links" aria-label="Primary navigation">

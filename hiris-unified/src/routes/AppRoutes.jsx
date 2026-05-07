@@ -29,7 +29,6 @@ const FacultyCandidates = lazy(() => import('../pages/portals/faculty/Candidates
 const FacultyInterviews = lazy(() => import('../pages/portals/faculty/Interviews'))
 
 const CHRODashboard = lazy(() => import('../pages/portals/chro/Dashboard'))
-const CHROOverview = lazy(() => import('../pages/portals/chro/Overview'))
 const CHROPolicies = lazy(() => import('../pages/portals/chro/Policies'))
 const CHROTeam = lazy(() => import('../pages/portals/chro/Team'))
 const CHROAnalytics = lazy(() => import('../pages/portals/chro/Analytics'))
@@ -86,7 +85,7 @@ export default function AppRoutes() {
 
         <Route element={<ProtectedRoute allowedPortal="chro" />}>
           <Route path="/chro" element={<CHRODashboard />} />
-          <Route path="/chro/overview" element={<CHROOverview />} />
+          <Route path="/chro/overview" element={<Navigate to="/chro" replace />} />
           <Route path="/chro/policies" element={<CHROPolicies />} />
           <Route path="/chro/team" element={<CHROTeam />} />
           <Route path="/chro/analytics" element={<CHROAnalytics />} />

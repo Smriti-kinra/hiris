@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import hirisLogo from '../assets/hiris-logo.svg'
 
 /* ── Icon helpers (inline SVGs, no dep needed) ── */
 const Icon = ({ d, size = 16 }) => (
@@ -46,7 +47,6 @@ const navConfigs = {
   ],
   chro: [
     { label: 'Overview', to: '/chro', icon: 'home', end: true },
-    { label: 'Hiring Overview', to: '/chro/overview', icon: 'chart' },
     { label: 'Policies', to: '/chro/policies', icon: 'policy' },
     { label: 'Candidates', to: '/chro/candidates', icon: 'users' },
     { label: 'Team', to: '/chro/team', icon: 'team' },
@@ -117,11 +117,7 @@ export default function AppShell({ portal, pageTitle, children }) {
       {/* ── Sidebar ── */}
       <aside className={`sidebar ${mobileMenuOpen ? 'open' : ''}`}>
         <div className="sidebar-logo">
-          <div className="sidebar-logo-mark">H</div>
-          <div>
-            <div className="sidebar-logo-text">HIRIS</div>
-            <div className="sidebar-logo-sub">{pl.label}</div>
-          </div>
+          <img className="sidebar-logo-img" src={hirisLogo} alt="HIRIS" />
           <button 
             className="mobile-close-btn" 
             onClick={() => setMobileMenuOpen(false)}
@@ -132,7 +128,6 @@ export default function AppShell({ portal, pageTitle, children }) {
         </div>
 
         <nav className="sidebar-section">
-          <div className="sidebar-label">Navigation</div>
           {nav.map(item => (
             <NavLink
               key={item.to}

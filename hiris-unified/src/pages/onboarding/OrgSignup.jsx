@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { apiFetch } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
+import hirisLogo from '../../assets/hiris-logo.svg'
 
 /* ── Default role templates ─────────────────────────────────────────────────── */
 const DEFAULT_ROLES = [
@@ -122,9 +123,8 @@ export default function OrgSignup() {
     <div style={{ minHeight: '100vh', background: 'var(--slate-50)', fontFamily: 'var(--font-body)' }}>
       {/* Simple Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 32, height: 32, background: 'var(--brand)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 14 }}>H</div>
-          <div style={{ fontWeight: 700, fontSize: 16 }}>HIRIS</div>
+        <div className="onboarding-logo-wrap">
+          <img className="onboarding-logo-img" src={hirisLogo} alt="HIRIS" />
         </div>
         <Link to="/login" style={{ fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none', fontWeight: 600 }}>Already have an account? Login</Link>
       </div>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import AppShell from '../../../components/AppShell'
 import NewRequestModal from '../../../components/NewRequestModal'
 import { apiFetch } from '../../../services/api'
+import { useAuth } from '../../../context/AuthContext'
 
 function statusBadge(status) {
   const map = {
@@ -25,6 +26,7 @@ function pipelineBadge(stage) {
 }
 
 export default function HiringDashboard() {
+  const { user } = useAuth()
   const [stats, setStats]       = useState(null)
   const [requests, setRequests] = useState([])
   const [openings, setOpenings] = useState([])
@@ -66,7 +68,7 @@ export default function HiringDashboard() {
         <>
           <div className="page-header">
             <div>
-              <div className="page-title">Good morning! 👋</div>
+              <div className="page-title">Welcome, {user?.name}</div>
               <div className="page-subtitle">Here's what's happening with your hiring pipeline today.</div>
             </div>
             <button className="btn btn-primary" onClick={() => setModal(true)}>
