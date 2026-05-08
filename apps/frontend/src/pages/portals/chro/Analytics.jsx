@@ -32,6 +32,35 @@ export default function CHROAnalytics() {
     ]).then(([a, s]) => { setData(a); setStats(s) }).finally(() => setLoading(false))
   }, [])
 
+  const handleExport = () => {
+    const rows = []
+    rows.push(['Metric', 'Value'])
+    rows.push(['Total Requests', ((stats?.pending_requests || 0) + (stats?.approved_requests || 0)).toString()])
+    rows.push(['Active Openings', (stats?.active_openings ?? '—').toString()])
+    rows.push(['Total Candidates', (stats?.total_candidates ?? '—').toString()])
+    rows.push(['Avg AI Score', (data?.avg_ai_score ?? '—').toString()])
+    rows.push([])
+    rows.push(['Hiring Funnel Stage', 'Count'])
+    funnel.forEach(item => rows.push([STAGE_LABELS[item.stage] || item.stage, item.count.toString()]))
+    rows.push([])
+    rows.push(['Candidates by Source', 'Count'])
+    sources.forEach(item => rows.push([item.source, item.count.toString()]))
+    rows.push([])
+    rows.push(['Jobs by Department', 'Count'])
+    depts.forEach(item => rows.push([item.department, item.count.toString()]))
+
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = 'hiris-chro-analytics.csv'
+    document.body.appendChild(anchor)
+    anchor.click()
+    document.body.removeChild(anchor)
+    URL.revokeObjectURL(url)
+  }
+
   if (loading) return <AppShell portal="chro" pageTitle="Analytics"><div style={{ display: 'flex', justifyContent: 'center', paddingTop: 80 }}><div className="spinner" /></div></AppShell>
 
   const funnel  = data?.hiring_funnel        || []
@@ -43,8 +72,11 @@ export default function CHROAnalytics() {
 
   return (
     <AppShell portal="chro" pageTitle="Analytics">
-      <div className="page-header">
+      <div className="page-header" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
         <div><div className="page-title">Hiring Analytics</div><div className="page-subtitle">Live metrics derived from the full hiring pipeline</div></div>
+        <button onClick={handleExport} className="btn btn-outline" style={{ fontSize: 13 }}>
+          Export Report
+        </button>
       </div>
       <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
         <div className="stat-card"><div className="stat-label">Total Requests</div><div className="stat-value" style={{ color: 'var(--brand)' }}>{(stats?.pending_requests||0) + (stats?.approved_requests||0)}</div></div>

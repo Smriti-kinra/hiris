@@ -21,6 +21,8 @@ export default function BehavioralInterviewRoom() {
   const [ratings, setRatings] = useState(BEH_TRAITS.reduce((acc, t) => ({ ...acc, [t]: 5 }), {}))
   const [recommendation, setRecommendation] = useState('neutral')
   const [ending, setEnding] = useState(false)
+  const [candidateProfile, setCandidateProfile] = useState(null)
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   // AI Questions (fetched from Gemini via backend)
   const [aiQuestions, setAiQuestions] = useState([])
@@ -43,6 +45,10 @@ export default function BehavioralInterviewRoom() {
         // Pre-fetch AI questions for this candidate
         if (d.candidate_id) {
           fetchAIQuestions(d.candidate_id)
+          apiFetch(`/candidates/${d.candidate_id}`)
+            .then(r => r.ok ? r.json() : null)
+            .then(setCandidateProfile)
+            .catch(() => null)
         }
       })
       .catch(() => navigate('/'))
@@ -199,6 +205,56 @@ export default function BehavioralInterviewRoom() {
                 <div style={{ fontSize: 24, fontWeight: 800, fontFamily: 'monospace', color: 'var(--brand)' }}>{formatTime(timer)}</div>
               </div>
             </div>
+          </div>
+
+          <div className="card">
+            <div className="card-pad" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>Candidate Preview</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Compact context for the current interview.</div>
+              </div>
+              <button className="btn btn-outline" onClick={() => setPreviewOpen(open => !open)} style={{ fontSize: 12, padding: '8px 14px' }}>
+                {previewOpen ? 'Hide Preview' : 'Show Preview'}
+              </button>
+            </div>
+            {previewOpen && (
+              <div className="card-pad" style={{ display: 'grid', gap: 12 }}>
+                {candidateProfile ? (
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      <div>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>Candidate</div>
+                        <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{candidateProfile.name}</div>
+                        <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{candidateProfile.headline || candidateProfile.job_title || 'No headline available'}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>Stage</div>
+                        <div style={{ fontWeight: 700, color: 'var(--brand)' }}>{candidateProfile.stage || 'Unknown'}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>{candidateProfile.department || 'No department'}</div>
+                      </div>
+                    </div>
+                    {candidateProfile.skills?.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>Skills</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {candidateProfile.skills.map(skill => (
+                            <span key={skill} className="badge badge-gray" style={{ fontSize: 11 }}>{skill}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {candidateProfile.score != null && (
+                      <div style={{ marginTop: 6 }}>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>AI Score</div>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: candidateProfile.score >= 80 ? 'var(--accent-green)' : candidateProfile.score >= 60 ? 'var(--accent-amber)' : 'var(--accent-red)' }}>{candidateProfile.score}</div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Loading candidate profile...</div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* AI Question Suggestions Panel */}

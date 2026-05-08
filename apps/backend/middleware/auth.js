@@ -7,7 +7,9 @@ const { query } = require('../config/db')
  * RBAC state is always read fresh so role edits take effect immediately.
  */
 async function requireAuth(req, res, next) {
-  const token = req.cookies?.hiris_token
+  const authHeader = req.headers?.authorization
+  let token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() : null
+  if (!token) token = req.cookies?.hiris_token
   if (!token) return res.status(401).json({ error: 'Not authenticated.' })
 
   try {
@@ -24,7 +26,6 @@ async function requireAuth(req, res, next) {
 
     const user = rows[0]
     if (!user) {
-      res.clearCookie('hiris_token')
       return res.status(401).json({ error: 'User not found.' })
     }
 
@@ -47,7 +48,6 @@ async function requireAuth(req, res, next) {
     if (process.env.NODE_ENV !== 'test') {
       console.error('[auth] Auth check failed:', err.message)
     }
-    res.clearCookie('hiris_token')
     return res.status(401).json({ error: 'Session expired. Please log in again.' })
   }
 }

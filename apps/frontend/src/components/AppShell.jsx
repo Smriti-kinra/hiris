@@ -60,12 +60,13 @@ const PORTAL_NAV_BUILDERS = {
     { label: 'Posted Jobs',      to: '/hiring/posted-jobs',    icon: 'briefcase', show: hasPerm(user, 'can_view_jobs') },
     { label: 'Candidates',       to: '/hiring/candidates',     icon: 'users',     show: hasPerm(user, 'can_view_candidates') },
     { label: 'Schedule',         to: '/hiring/schedule',       icon: 'calendar',  show: hasPerm(user, 'can_view_interviews') },
+    { label: 'Archive',          to: '/hiring/archive',        icon: 'archive',   show: hasPerm(user, 'can_view_jobs') || hasPerm(user, 'can_view_candidates') },
   ].filter(i => i.show !== false),
 
   chro: (user) => [
     { label: 'Overview',         to: '/chro',                  icon: 'home',      end: true },
     { label: 'Candidates',       to: '/chro/candidates',       icon: 'users',     show: hasPerm(user, 'can_view_candidates') },
-    { label: 'Schedule',         to: '/chro/interviews',       icon: 'calendar',  show: hasPerm(user, 'can_view_interviews') },
+    { label: 'Interview',        to: '/chro/interviews',       icon: 'calendar',  show: hasPerm(user, 'can_view_interviews') },
     { label: 'Analytics',        to: '/chro/analytics',        icon: 'chart',     show: hasPerm(user, 'can_view_analytics') },
     { label: 'Policies',         to: '/chro/policies',         icon: 'policy',    show: hasPerm(user, 'can_view_policies') },
     { label: 'Team',             to: '/chro/team',             icon: 'team',      show: hasPerm(user, 'can_manage_team') },
@@ -201,9 +202,6 @@ export default function AppShell({ portal, pageTitle, children }) {
                 <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
               </svg>
             </button>
-            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.2px' }}>
-              {pageTitle}
-            </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle dark mode">

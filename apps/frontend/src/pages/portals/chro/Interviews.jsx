@@ -91,10 +91,10 @@ export default function CHROInterviews() {
   )
 
   return (
-    <AppShell portal="chro" pageTitle="Schedule">
+    <AppShell portal="chro" pageTitle="Interview">
       <div className="page-header">
         <div>
-          <div className="page-title">Schedule</div>
+          <div className="page-title">Interview</div>
           <div className="page-subtitle">
             {scheduledInterviews.length} scheduled interview{scheduledInterviews.length !== 1 ? 's' : ''}
           </div>
@@ -108,12 +108,9 @@ export default function CHROInterviews() {
         </button>
       </div>
 
-
-
-<<<<<<< HEAD
-      {/* Scheduled Interviews */}
-      <div className="card">
-=======
+      {/* Pipeline View */}
+      {activeTab === 'pipeline' && (
+        <div className="card">
           {loading ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><div className="spinner" /></div>
           ) : filtered.length === 0 ? (
@@ -218,7 +215,6 @@ export default function CHROInterviews() {
       {/* Scheduled Tab */}
       {activeTab === 'schedule' && (
         <div className="card">
->>>>>>> e120a136d25f458c6cd80a5ba5a876b5be70dc41
           {scheduledInterviews.length === 0 ? (
             <div className="empty-state">No scheduled interviews</div>
           ) : (
@@ -278,7 +274,9 @@ export default function CHROInterviews() {
               </tbody>
             </table>
           )}
-        </div>
+        </div>  
+      )}
+
     </AppShell>
   )
 }

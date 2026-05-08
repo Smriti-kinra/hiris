@@ -124,9 +124,9 @@ export default function Archive() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {analytics && (
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-              <StatCard label="Retention Rate" value={analytics.retention?.retention_rate_pct != null ? `${analytics.retention.retention_rate_pct}%` : '—'} icon="📈" color="#10B981" />
-              <StatCard label="Total Ever Hired" value={analytics.retention?.total_ever_hired} icon="🎯" color="#3B82F6" />
-              <StatCard label="Currently Active" value={analytics.retention?.currently_active} icon="✅" color="#6366F1" />
+              <StatCard label="Retention Rate" value={analytics.retention?.retention_rate_pct != null ? `${analytics.retention.retention_rate_pct}%` : '—'} icon="R" color="#10B981" />
+              <StatCard label="Total Ever Hired" value={analytics.retention?.total_ever_hired} icon="H" color="#3B82F6" />
+              <StatCard label="Currently Active" value={analytics.retention?.currently_active} icon="A" color="#6366F1" />
             </div>
           )}
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -204,10 +204,10 @@ export default function Archive() {
               <div className="card card-pad" style={{ marginBottom: 16 }}>
                 <div style={{ fontWeight: 700, fontSize: 16 }}>{selectedJob.title}</div>
                 <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{selectedJob.department} · Closed {selectedJob.closed_at ? new Date(selectedJob.closed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</div>
-                <div style={{ display: 'flex', gap: 20, marginTop: 12, fontSize: 13 }}>
-                  <span>📥 {selectedJob.total_applicants} applied</span>
-                  <span style={{ color: '#10B981' }}>✅ {selectedJob.total_hired} hired</span>
-                  <span style={{ color: '#EF4444' }}>❌ {selectedJob.total_rejected} rejected</span>
+                <div style={{ display: 'flex', gap: 20, marginTop: 12, fontSize: 13, flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 600 }}>{selectedJob.total_applicants ?? 0} applicants</span>
+                  <span style={{ color: '#10B981', fontWeight: 600 }}>{selectedJob.total_hired ?? 0} hired</span>
+                  <span style={{ color: '#EF4444', fontWeight: 600 }}>{selectedJob.total_rejected ?? 0} rejected</span>
                 </div>
               </div>
               <div className="card" style={{ overflow: 'hidden' }}>

@@ -1,6 +1,18 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { apiFetch, safeJson } from '../services/api'
 
+export function getSessionToken() {
+  return sessionStorage.getItem('hiris_token')
+}
+
+export function saveSessionToken(token) {
+  sessionStorage.setItem('hiris_token', token)
+}
+
+export function clearSessionToken() {
+  sessionStorage.removeItem('hiris_token')
+}
+
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
@@ -14,10 +26,15 @@ export function AuthProvider({ children }) {
     localStorage.setItem('hiris_theme', theme)
   }, [theme])
 
-  /* ── Restore session from JWT cookie on mount ── */
+  /* ── Restore session from sessionStorage token on mount ── */
   useEffect(() => {
     // Clear any stale Phase-2 localStorage session
     localStorage.removeItem('hiris_user')
+
+    if (!getSessionToken()) {
+      setLoading(false)
+      return
+    }
 
     apiFetch('/auth/me')
       .then(safeJson)
@@ -33,12 +50,14 @@ export function AuthProvider({ children }) {
     })
     const data = await safeJson(res) ?? {}
     if (!res.ok) throw new Error(data.error || 'Login failed')
+    saveSessionToken(data.token)
     setUser(data.user)
     return data.user
   }, [])
 
   const logout = useCallback(async () => {
     await apiFetch('/auth/logout', { method: 'POST' }).catch(() => {})
+    clearSessionToken()
     setUser(null)
   }, [])
 

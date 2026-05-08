@@ -87,7 +87,6 @@ export default function HiringDashboard() {
               <div className="stat-card" key={s.label}>
                 <div className="stat-label">{s.label}</div>
                 <div className="stat-value" style={{ color: 'var(--brand)' }}>{s.value}</div>
-                {s.trend && <div className={`stat-trend ${s.trend}`}>↑ On track</div>}
               </div>
             ))}
           </div>

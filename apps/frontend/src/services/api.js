@@ -21,6 +21,7 @@ export function assetUrl(path = '') {
 export async function apiFetch(path, options = {}) {
   const isBodyRequest = ['POST', 'PUT', 'PATCH'].includes((options.method || '').toUpperCase())
   const isFormData = options.body instanceof FormData
+  const token = sessionStorage.getItem('hiris_token')
 
   try {
     const res = await fetch(apiUrl(path), {
@@ -29,6 +30,7 @@ export async function apiFetch(path, options = {}) {
       headers: {
         ...(isBodyRequest && !isFormData ? { 'Content-Type': 'application/json' } : {}),
         ...options.headers,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
     })
     return res
