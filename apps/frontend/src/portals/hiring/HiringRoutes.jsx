@@ -14,6 +14,7 @@ const HiringCandidates  = lazy(() => import('../../pages/portals/hiring/Candidat
 const HiringJobs        = lazy(() => import('../../pages/portals/hiring/Jobs'))
 const HiringSchedule    = lazy(() => import('../../pages/portals/hiring/Schedule'))
 const JobPostingBuilder = lazy(() => import('../../pages/portals/hiring/JobPostingBuilder'))
+const HiringArchive     = lazy(() => import('../../pages/portals/hiring/Archive'))
 const PostedJobs        = lazy(() => import('../../pages/portals/hiring/PostedJobs'))
 const JobApplicants     = lazy(() => import('../../pages/portals/hiring/JobApplicants'))
 const CandidateProfile  = lazy(() => import('../../pages/portals/shared/CandidateProfile'))
@@ -41,6 +42,7 @@ export default function HiringRoutes() {
           <Route element={<ProtectedRoute requiredAny={['can_view_jobs','can_build_jd']} />}>
             <Route path="/hiring/jobs"                   element={<HiringJobs />} />
             <Route path="/hiring/job-builder"            element={<JobPostingBuilder />} />
+            <Route path="/hiring/archive"               element={<HiringArchive />} />
           </Route>
           <Route element={<ProtectedRoute requiredPermission="can_view_jobs" />}>
             <Route path="/hiring/posted-jobs"            element={<PostedJobs />} />

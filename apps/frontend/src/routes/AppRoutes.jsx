@@ -19,6 +19,7 @@ const HiringSchedule = lazy(() => import('../pages/portals/hiring/Schedule'))
 const JobPostingBuilder = lazy(() => import('../pages/portals/hiring/JobPostingBuilder'))
 const PostedJobs = lazy(() => import('../pages/portals/hiring/PostedJobs'))
 const JobApplicants = lazy(() => import('../pages/portals/hiring/JobApplicants'))
+const HiringArchive = lazy(() => import('../pages/portals/hiring/Archive'))
 const CandidateProfile = lazy(() => import('../pages/portals/shared/CandidateProfile'))
 const TechnicalInterviewRoom = lazy(() => import('../pages/portals/shared/TechnicalInterviewRoom'))
 const BehavioralInterviewRoom = lazy(() => import('../pages/portals/shared/BehavioralInterviewRoom'))
@@ -99,6 +100,7 @@ export default function AppRoutes() {
         <Route element={<ProtectedRoute requiredPermission="can_view_jobs" />}>
           <Route path="/hiring/posted-jobs" element={<PostedJobs />} />
           <Route path="/hiring/posted-jobs/:jobId" element={<JobApplicants />} />
+          <Route path="/hiring/archive" element={<HiringArchive />} />
         </Route>
         <Route element={<ProtectedRoute requiredAny={['can_view_interviews', 'can_conduct_interview']} />}>
           <Route path="/hiring/schedule" element={<HiringSchedule />} />

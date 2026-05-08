@@ -12,7 +12,7 @@
  */
 
 const request = require('supertest')
-const { buildApp, seedTestOrg, teardownTestOrg, mintCookie, closePool } = require('./helpers')
+const { buildApp, seedTestOrg, teardownTestOrg, mintCookie, closePool, dbQuery } = require('./helpers')
 
 let app, ctx
 
@@ -22,7 +22,10 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
-  await teardownTestOrg(ctx.org.id)
+  if (ctx?.org?.id) {
+    await dbQuery(`DELETE FROM candidates WHERE org_id=$1 AND email=$2`, [ctx.org.id, 'subhi.verma@email.com']).catch(() => {})
+    await teardownTestOrg(ctx.org.id)
+  }
   await closePool()
 })
 
@@ -65,6 +68,51 @@ describe('GET /api/candidates', () => {
       expect(c).toHaveProperty('email')
       expect(c).toHaveProperty('stage')
     }
+  })
+})
+
+describe('POST /api/candidates', () => {
+  it('creates a complete candidate profile that appears in the candidate list', async () => {
+    const payload = {
+      candidate: {
+        name: 'Subhi Verma',
+        email: 'subhi.verma@email.com',
+        phone: '+91 98765 43210',
+        location: 'Gurugram, Haryana, India',
+        linkedin: 'linkedin.com/in/subhiverma',
+        github: 'github.com/subhiverma',
+      },
+      role_applied: 'Software Development Engineer II (SDE-2)',
+      application: {
+        source: 'Direct',
+        stage: 'final_review',
+        applied_at: '2026-05-08T00:00:00.000Z',
+      },
+      education: [{ degree: 'B.Tech, Computer Science & Engineering', institution: 'Delhi Technological University (DTU)', year: '2016-2020', grade: '8.7/10' }],
+      experience: [{ role: 'SDE-2', company: 'Flipkart', duration: 'Aug 2022-Present', desc: 'Owned backend systems and latency improvements.' }],
+      skills: ['Java', 'Python', 'Go', 'TypeScript', 'Kafka', 'AWS', 'Kubernetes'],
+      assessment: {
+        overall_fit_score: 9.1,
+        technical_skill_match_percent: 93,
+        overall_recommendation: 'Strong Hire',
+      },
+      final_recommendation: 'Strong Hire. All stages passed; make an offer.',
+    }
+
+    const createRes = await request(app)
+      .post('/api/candidates')
+      .set('Cookie', mintCookie(ctx.admin))
+      .send(payload)
+
+    expect(createRes.status).toBe(201)
+    expect(createRes.body.stage).toBe('final_review')
+
+    const listRes = await request(app)
+      .get('/api/candidates')
+      .set('Cookie', mintCookie(ctx.admin))
+
+    expect(listRes.status).toBe(200)
+    expect(listRes.body.some(c => c.email === 'subhi.verma@email.com')).toBe(true)
   })
 })
 

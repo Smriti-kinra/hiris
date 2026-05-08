@@ -66,7 +66,7 @@ export default function PostedJobs() {
         <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}><div className="spinner" /></div>
       ) : jobs.length === 0 ? (
         <div className="empty-state">
-          <div style={{ fontSize: 40, marginBottom: 16 }}>💼</div>
+          <div style={{ width: 40, height: 40, marginBottom: 16, borderRadius: 20, background: 'var(--brand-light)' }} />
           <div style={{ fontWeight: 600, fontSize: 16, color: 'var(--text-primary)' }}>No active postings</div>
           <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>Get started by creating a new hiring request.</div>
         </div>

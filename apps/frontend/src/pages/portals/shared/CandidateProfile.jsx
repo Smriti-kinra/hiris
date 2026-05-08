@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import AppShell from '../../../components/AppShell'
 import { apiFetch, assetUrl } from '../../../services/api'
 import { useAuth } from '../../../context/AuthContext'
+import { useToast } from '../../../context/ToastContext'
 
 const STAGE_BADGE = {
   'Applied':              'badge-gray',
@@ -35,7 +36,7 @@ function SectionCard({ icon, title, children }) {
   return (
     <div className="card" style={{ marginBottom: 20 }}>
       <div className="card-pad" style={{ borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--brand-light)', color: 'var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>{icon}</div>
+        <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--brand-light)', color: 'var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700 }}>{icon}</div>
         <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)' }}>{title}</div>
       </div>
       <div className="card-pad">{children}</div>
@@ -43,10 +44,52 @@ function SectionCard({ icon, title, children }) {
   )
 }
 
+function renderMarkdown(text) {
+  if (!text) return ''
+  const escapeHtml = (value) => String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+
+  const formatInline = (value) => escapeHtml(value)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+
+  const lines = String(text).split(/\r?\n/)
+  const html = []
+  let inList = false
+
+  lines.forEach((line) => {
+    const trimmed = line.trim()
+    if (trimmed.startsWith('# ')) {
+      if (inList) { html.push('</ul>'); inList = false }
+      html.push(`<div style="font-size:16px;font-weight:800;margin:16px 0 8px;">${formatInline(trimmed.slice(2))}</div>`)
+    } else if (trimmed.startsWith('## ')) {
+      if (inList) { html.push('</ul>'); inList = false }
+      html.push(`<div style="font-size:14px;font-weight:700;margin:14px 0 6px;">${formatInline(trimmed.slice(3))}</div>`)
+    } else if (trimmed.startsWith('- ')) {
+      if (!inList) {
+        html.push('<ul style="margin:0 0 12px 16px;padding:0;list-style:disc;">')
+        inList = true
+      }
+      html.push(`<li style="margin-bottom:6px;">${formatInline(trimmed.slice(2))}</li>`)
+    } else if (trimmed === '') {
+      if (inList) { html.push('</ul>'); inList = false }
+    } else {
+      if (inList) { html.push('</ul>'); inList = false }
+      html.push(`<p style="margin:0 0 12px;line-height:1.7;">${formatInline(trimmed)}</p>`)
+    }
+  })
+
+  if (inList) html.push('</ul>')
+  return html.join('')
+}
+
 export default function CandidateProfile() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const toast = useToast()
   const section = (user?.home_path || '').match(/^\/([^/?#]+)/)?.[1]
   const portal = ['hiring', 'faculty', 'chro'].includes(section) ? section : 'hiring'
   const noteField = (user?.permissions?.can_review_jd || user?.permissions?.can_conduct_interview) ? 'faculty_notes' : 'manager_notes'
@@ -116,6 +159,9 @@ export default function CandidateProfile() {
         rejected:             'Rejected'
       }
       setCandidate(prev => ({ ...prev, stage: STAGE_MAP[newStageRaw], stage_raw: newStageRaw }))
+      if (newStageRaw === 'offered') {
+        toast.success('Offer created and candidate moved to offered stage.')
+      }
     }
     setMovingStage(false)
   }
@@ -201,13 +247,13 @@ export default function CandidateProfile() {
             <div className="card-pad">
               <div style={{ fontWeight: 700, fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 12 }}>Contact</div>
               {[
-                { icon: '✉️', val: candidate.email },
-                { icon: '📞', val: candidate.phone || '—' },
-                { icon: '📍', val: candidate.location || '—' },
-                { icon: '🔗', val: candidate.source },
-              ].map(({ icon, val }) => (
-                <div key={icon} style={{ display: 'flex', gap: 8, marginBottom: 8, fontSize: 13 }}>
-                  <span>{icon}</span>
+                { icon: 'E', label: 'Email', val: candidate.email },
+                { icon: 'P', label: 'Phone', val: candidate.phone || '—' },
+                { icon: 'L', label: 'Location', val: candidate.location || '—' },
+                { icon: 'S', label: 'Source', val: candidate.source || '—' },
+              ].map(({ icon, label, val }) => (
+                <div key={label} style={{ display: 'flex', gap: 8, marginBottom: 8, fontSize: 13 }}>
+                  <span style={{ width: 18, height: 18, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4, background: 'rgba(15,23,42,0.06)', color: 'var(--text-primary)', fontSize: 12, fontWeight: 700 }}>{icon}</span>
                   <span style={{ color: 'var(--text-secondary)', wordBreak: 'break-all' }}>{val}</span>
                 </div>
               ))}
@@ -374,10 +420,8 @@ export default function CandidateProfile() {
 
           {/* AI Summary */}
           {candidate.ai_summary && (
-            <SectionCard icon="🤖" title="AI Evaluation Summary">
-              <div style={{ background: 'var(--brand-light)', border: '1px solid var(--brand)', borderRadius: 10, padding: 16, fontSize: 14, lineHeight: 1.7, color: 'var(--text-primary)' }}>
-                {candidate.ai_summary}
-              </div>
+            <SectionCard icon="AI" title="AI Evaluation Summary">
+              <div style={{ background: 'var(--brand-light)', border: '1px solid var(--brand)', borderRadius: 10, padding: 16, fontSize: 14, lineHeight: 1.7, color: 'var(--text-primary)' }} dangerouslySetInnerHTML={{ __html: renderMarkdown(candidate.ai_summary) }} />
             </SectionCard>
           )}
 
@@ -394,7 +438,7 @@ export default function CandidateProfile() {
 
           {/* Education */}
           {edu.length > 0 && (
-            <SectionCard icon="🎓" title="Education">
+            <SectionCard icon="EDU" title="Education">
               {edu.map((e, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: i < edu.length - 1 ? '1px solid var(--border)' : 'none' }}>
                   <div>
@@ -412,7 +456,7 @@ export default function CandidateProfile() {
 
           {/* Experience */}
           {exp.length > 0 && (
-            <SectionCard icon="💼" title="Work Experience">
+            <SectionCard icon="EXP" title="Work Experience">
               {exp.map((e, i) => (
                 <div key={i} style={{ paddingBottom: i < exp.length - 1 ? 16 : 0, marginBottom: i < exp.length - 1 ? 16 : 0, borderBottom: i < exp.length - 1 ? '1px solid var(--border)' : 'none' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -428,7 +472,7 @@ export default function CandidateProfile() {
 
           {/* Q&A */}
           {answers.length > 0 && (
-            <SectionCard icon="📝" title="Application Questions & Answers">
+            <SectionCard icon="Q&A" title="Application Questions & Answers">
               {answers.map((qa, i) => (
                 <div key={i} style={{ marginBottom: i < answers.length - 1 ? 20 : 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>Q{i + 1}. {qa.question}</div>
@@ -440,7 +484,7 @@ export default function CandidateProfile() {
 
           {/* Chatbot Transcript */}
           {transcript.length > 0 && (
-            <SectionCard icon="💬" title="AI Pre-Screening Chat">
+            <SectionCard icon="AI" title="AI Pre-Screening Chat">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {transcript.map((msg, i) => (
                   <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -460,7 +504,7 @@ export default function CandidateProfile() {
 
           {/* Generated Questions */}
           {generatedQuestions.length > 0 && (
-            <SectionCard icon="💡" title="Generated Behavioral Questions">
+            <SectionCard icon="QG" title="Generated Behavioral Questions">
               <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
                 These questions were generated contextually based on the candidate's resume, CV, and AI chat answers.
               </div>
@@ -481,7 +525,7 @@ export default function CandidateProfile() {
             return (
             <SectionCard 
               key={int.id} 
-              icon={int.type === 'technical' ? '💻' : '🤝'} 
+              icon={int.type === 'technical' ? 'T' : 'B'} 
               title={`${int.type === 'technical' ? 'Technical' : 'Behavioral'} Interview Summary`}
             >
               <div style={{ marginBottom: 16 }}>
@@ -511,7 +555,7 @@ export default function CandidateProfile() {
               {int.ai_summary && (
                 <div style={{ background: 'var(--brand-light)', border: '1px solid var(--brand)', borderRadius: 10, padding: 12, fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
                   <div style={{ fontWeight: 700, color: 'var(--brand)', marginBottom: 4 }}>AI Assessment Summary</div>
-                  {int.ai_summary}
+                  <div dangerouslySetInnerHTML={{ __html: renderMarkdown(int.ai_summary) }} />
                 </div>
               )}
               {analysis.strengths?.length > 0 && (
@@ -547,12 +591,12 @@ export default function CandidateProfile() {
             />
             {noteSaveStatus === 'ok' && (
               <div style={{ fontSize: 12, color: 'var(--accent-green)', fontWeight: 600, marginBottom: 8 }}>
-                ✓ Notes saved successfully.
+                Notes saved successfully.
               </div>
             )}
             {noteSaveStatus === 'error' && (
               <div style={{ fontSize: 12, color: 'var(--accent-red)', fontWeight: 600, marginBottom: 8 }}>
-                ✕ Failed to save notes. Please try again.
+                Failed to save notes. Please try again.
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>

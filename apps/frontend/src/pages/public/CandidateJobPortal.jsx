@@ -178,7 +178,9 @@ export default function CandidateJobPortal() {
             <p style={{ color: 'var(--text-secondary)', fontSize: 16, lineHeight: 1.6, marginBottom: 40 }}>
               Thank you for applying for the <strong>{job.title}</strong> position. Our hiring team will review your profile and get back to you via email.
             </p>
-            <button onClick={() => window.location.reload()} className="btn btn-primary" style={{ padding: '12px 24px', fontSize: 15 }}>Submit Another Application</button>
+            <div style={{ marginTop: 20, fontSize: 16, color: 'var(--text-primary)', lineHeight: 1.7 }}>
+              Your application has been received. We will contact you by email with the next steps.
+            </div>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 32, alignItems: 'start' }}>

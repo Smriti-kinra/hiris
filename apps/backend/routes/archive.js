@@ -269,23 +269,28 @@ router.patch('/archive/employees/:id/exit', requireAuth, requirePermission('can_
 // ── Expired Job Openings ──────────────────────────────────────────────────────
 router.get('/archive/expired-jobs', requireAuth, requirePermission('can_view_analytics'), async (req, res) => {
   const orgId = req.currentUser.orgId
-  const { search = '', department, close_reason } = req.query
-  let where = `WHERE eja.org_id = $1`
+  const { search = '', department, status } = req.query
+  let where = `WHERE j.org_id = $1`
   const params = [orgId]
   let idx = 2
-  if (search) { where += ` AND (eja.title ILIKE $${idx} OR eja.department ILIKE $${idx})`; params.push(`%${search}%`); idx++ }
-  if (department) { where += ` AND eja.department = $${idx}`; params.push(department); idx++ }
-  if (close_reason) { where += ` AND eja.close_reason = $${idx}`; params.push(close_reason); idx++ }
+  if (search) { where += ` AND (j.title ILIKE $${idx} OR j.department ILIKE $${idx})`; params.push(`%${search}%`); idx++ }
+  if (department) { where += ` AND j.department = $${idx}`; params.push(department); idx++ }
+  if (status) { where += ` AND j.status = $${idx}`; params.push(status); idx++ }
 
   const { rows } = await query(`
-    SELECT eja.id::text, eja.title, eja.department, eja.job_type, eja.location,
-      eja.posted_at, eja.closed_at, eja.close_reason,
-      eja.total_applicants, eja.total_hired, eja.total_rejected,
-      u.name AS requested_by
-    FROM expired_job_archive eja
-    LEFT JOIN users u ON u.id = eja.requested_by
+    SELECT j.id::text, j.title, j.department, j.status, j.job_type, j.location,
+      j.posted_at, j.description,
+      u.name AS manager, hr.id::text AS request_id, requester.name AS requested_by,
+      COUNT(a.id)::int AS candidates_count
+    FROM jobs j
+    LEFT JOIN users u ON u.id=j.manager_id
+    LEFT JOIN headcount_requests hr ON hr.job_id=j.id
+    LEFT JOIN users requester ON requester.id=hr.requested_by
+    LEFT JOIN applications a ON a.job_id=j.id
     ${where}
-    ORDER BY eja.closed_at DESC
+    GROUP BY j.id,j.title,j.department,j.status,j.job_type,j.location,
+      j.posted_at,j.description,u.name,hr.id,requester.name
+    ORDER BY j.posted_at DESC NULLS LAST, j.id DESC
   `, params)
   res.json(rows)
 })

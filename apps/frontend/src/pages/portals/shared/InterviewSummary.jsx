@@ -92,6 +92,24 @@ export default function InterviewSummary() {
 
   const notesText = reviewerNotes?.session_notes || session.interviewer_notes
 
+  const renderMarkdown = (text) => {
+    if (!text) return ''
+    const escape = String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+    return escape
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/^(#{1,3})\s*(.+)$/gm, (_, hashes, content) => {
+        const size = hashes.length === 1 ? '18px' : hashes.length === 2 ? '16px' : '14px'
+        return `<div style="font-size:${size};font-weight:700;margin:14px 0 6px;">${content}</div>`
+      })
+      .replace(/^-\s+(.+)$/gm, '<li>$1</li>')
+      .replace(/(<li>.+<\/li>)/g, '<ul>$1</ul>')
+      .replace(/\n/g, '<br/>')
+  }
+
   return (
     <AppShell portal={portal} pageTitle="Interview Summary">
       <div style={{ maxWidth: 1040, margin: '0 auto' }}>
@@ -193,9 +211,7 @@ export default function InterviewSummary() {
                 <div className="card-pad" style={{ borderBottom: '1px solid var(--border)' }}>
                   <div style={{ fontWeight: 700, fontSize: 16 }}>AI Summary</div>
                 </div>
-                <div className="card-pad" style={{ lineHeight: 1.6, fontSize: 14, color: 'var(--text-secondary)' }}>
-                  {session.ai_summary || 'AI analysis is processing. Please refresh in a moment.'}
-                </div>
+                <div className="card-pad" style={{ lineHeight: 1.6, fontSize: 14, color: 'var(--text-secondary)' }} dangerouslySetInnerHTML={{ __html: session.ai_summary ? renderMarkdown(session.ai_summary) : 'AI analysis is processing. Please refresh in a moment.' }} />
                 {aiAnalysis.institutional_alignment && (
                   <div className="card-pad" style={{ borderTop: '1px solid var(--border)' }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>Institutional Alignment</div>
@@ -221,22 +237,6 @@ export default function InterviewSummary() {
               </div>
             )}
 
-            {/* Transcript — always shown */}
-            <div className="card">
-              <div className="card-pad" style={{ borderBottom: '1px solid var(--border)' }}>
-                <div style={{ fontWeight: 700, fontSize: 16 }}>Transcript</div>
-              </div>
-              <div className="card-pad" style={{ maxHeight: 400, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, background: 'var(--bg-hover)' }}>
-                {(session.transcript || []).length === 0 ? (
-                  <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No transcript recorded.</div>
-                ) : (session.transcript || []).map((m, i) => (
-                  <div key={i} style={{ fontSize: 13 }}>
-                    <span style={{ fontWeight: 700, color: m.speaker === 'Candidate' ? 'var(--text-primary)' : 'var(--brand)', marginRight: 8 }}>{m.speaker}:</span>
-                    <span style={{ color: 'var(--text-secondary)' }}>{m.text}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
 
           {/* Right sidebar */}

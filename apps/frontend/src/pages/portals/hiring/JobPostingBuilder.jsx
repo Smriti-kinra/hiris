@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import AppShell from '../../../components/AppShell'
 import { apiFetch } from '../../../services/api'
 import { useAuth } from '../../../context/AuthContext'
+import { useToast } from '../../../context/ToastContext'
 
 export default function JobPostingBuilder() {
   const [searchParams] = useSearchParams()
@@ -45,6 +46,7 @@ export default function JobPostingBuilder() {
   const respRef = useRef(null)
 
   const navigate = useNavigate()
+  const toast = useToast()
   const { user } = useAuth()
   
   const canBuildJd = !!(user?.permissions?.can_build_jd || user?.permissions?.is_admin)
@@ -145,6 +147,7 @@ export default function JobPostingBuilder() {
         setSubmitError(data?.error || 'Failed to send for review. Please try again.')
         return
       }
+      toast.success('Job description submitted for review.')
       navigate('/hiring/requests')
     } catch(err) {
       setSubmitError(err.message || 'Network error. Please try again.')
@@ -167,6 +170,7 @@ export default function JobPostingBuilder() {
         setSubmitError(data?.error || 'Failed to approve. Please try again.')
         return
       }
+      toast.success('Job description approved successfully.')
       navigate(user?.home_path || '/dashboard')
     } catch(err) {
       setSubmitError(err.message || 'Network error. Please try again.')
@@ -320,7 +324,7 @@ export default function JobPostingBuilder() {
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px' }}>Job Description</label>
               {requestData?.description && (
                 <div style={{ padding: '12px', background: 'var(--brand-light)', border: '1px solid var(--brand)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 500, marginBottom: '12px' }}>
-                  💡 Professor's notes: "{requestData.description}"
+                  <strong>Note:</strong> Professor's notes: "{requestData.description}"
                 </div>
               )}
               {!readOnly && (

@@ -63,9 +63,8 @@ async function login(req, res) {
   }
 
   const token = issueToken(user)
-  res.cookie('hiris_token', token, COOKIE_OPTS)
 
-  res.json({ user: safeUser(user) })
+  res.json({ token, user: safeUser(user) })
 }
 
 async function getMe(req, res) {
@@ -84,7 +83,6 @@ async function getMe(req, res) {
 }
 
 function logout(req, res) {
-  res.clearCookie('hiris_token', { httpOnly: true, sameSite: 'lax' })
   res.json({ ok: true })
 }
 
@@ -201,9 +199,8 @@ async function registerOrg(req, res) {
     }
 
     const token = issueToken(createdAdmin)
-    res.cookie('hiris_token', token, COOKIE_OPTS)
 
-    res.status(201).json({ user: safeUser(createdAdmin) })
+    res.status(201).json({ token, user: safeUser(createdAdmin) })
   } catch (err) {
     console.error('[auth/register-org] Error:', err)
     res.status(500).json({ error: 'Internal server error during registration.' })
