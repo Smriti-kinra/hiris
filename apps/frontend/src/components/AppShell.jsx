@@ -60,7 +60,7 @@ const PORTAL_NAV_BUILDERS = {
     { label: 'Posted Jobs',      to: '/hiring/posted-jobs',    icon: 'briefcase', show: hasPerm(user, 'can_view_jobs') },
     { label: 'Candidates',       to: '/hiring/candidates',     icon: 'users',     show: hasPerm(user, 'can_view_candidates') },
     { label: 'Schedule',         to: '/hiring/schedule',       icon: 'calendar',  show: hasPerm(user, 'can_view_interviews') },
-    { label: 'Archive',          to: '/hiring/archive',        icon: 'archive',   show: hasPerm(user, 'can_view_jobs') || hasPerm(user, 'can_view_candidates') },
+    { label: 'Job Postings',    to: '/hiring/archive',        icon: 'archive',   show: hasPerm(user, 'can_view_jobs') || hasPerm(user, 'can_view_candidates') },
   ].filter(i => i.show !== false),
 
   chro: (user) => [

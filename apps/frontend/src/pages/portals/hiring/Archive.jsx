@@ -28,7 +28,7 @@ export default function HiringArchive() {
       <div className="page-header" style={{ marginBottom: 24 }}>
         <div>
           <div className="page-title">Archive</div>
-          <div className="page-subtitle">Expired openings and archived candidate history for hiring review.</div>
+          <div className="page-subtitle">All job postings and archived candidate history for hiring review.</div>
         </div>
       </div>
 
@@ -37,7 +37,7 @@ export default function HiringArchive() {
           className="hiris-input"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Search expired openings..."
+          placeholder="Search job postings..."
           style={{ flex: 1, minWidth: 260 }}
         />
       </div>
@@ -52,7 +52,7 @@ export default function HiringArchive() {
                 <th>Job Title</th>
                 <th>Department</th>
                 <th>Location</th>
-                <th>Expired On</th>
+                <th>Posted On</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -60,7 +60,7 @@ export default function HiringArchive() {
               {filteredJobs.length === 0 ? (
                 <tr>
                   <td colSpan={5} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
-                    No archived job openings found.
+                    No job postings found.
                   </td>
                 </tr>
               ) : filteredJobs.map(job => (
@@ -68,7 +68,7 @@ export default function HiringArchive() {
                   <td>{job.title || job.name || 'Untitled role'}</td>
                   <td>{job.department || '—'}</td>
                   <td>{job.location || 'Remote'}</td>
-                  <td>{job.expired_at ? new Date(job.expired_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</td>
+                  <td>{job.posted_at ? new Date(job.posted_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</td>
                   <td>{job.status || 'Archived'}</td>
                 </tr>
               ))}
