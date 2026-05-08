@@ -31,8 +31,8 @@ echo [3/3] Launching 5 Separate Incognito Windows...
 start chrome --incognito --new-window "http://localhost:5173/"
 start chrome --incognito --new-window "http://localhost:5173/faculty"
 start chrome --incognito --new-window "http://localhost:5173/chro"
-start chrome --incognito --new-window "http://localhost:5174/recruiter"
-start chrome --incognito --new-window "http://localhost:5175/candidate"
+:: start chrome --incognito --new-window "http://localhost:5174/recruiter"
+:: start chrome --incognito --new-window "http://localhost:5175/candidate"
 
 echo.
 echo [OK] 5 Isolated windows launched.
