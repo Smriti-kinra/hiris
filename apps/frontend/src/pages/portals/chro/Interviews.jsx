@@ -48,11 +48,11 @@ export default function CHROInterviews() {
     loadScheduled()
   }, [loadPipeline, loadScheduled])
 
-  const handleStartInterview = async (appId) => {
-    const type = 'behavioral'
-    const res = await apiFetch('/interviews/start', {
+  const handleStartInterview = async (interview) => {
+    const type = interview.interview_type || 'behavioral'
+    const res = await apiFetch(interview.id ? `/interviews/scheduled/${interview.id}/start` : '/interviews/start', {
       method: 'POST',
-      body: JSON.stringify({ application_id: appId, type })
+      body: interview.id ? undefined : JSON.stringify({ application_id: interview.application_id, type })
     })
     if (res.ok) {
       const { id } = await res.json()
@@ -110,8 +110,115 @@ export default function CHROInterviews() {
 
 
 
+<<<<<<< HEAD
       {/* Scheduled Interviews */}
       <div className="card">
+=======
+          {loading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><div className="spinner" /></div>
+          ) : filtered.length === 0 ? (
+            <div className="empty-state">
+              <div style={{ marginBottom: 8 }}>No candidates in Final Interview pipeline</div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                Candidates appear here after faculty approve them in the Technical Interview.
+              </div>
+            </div>
+          ) : (
+            <table className="hiris-table">
+              <thead>
+                <tr>
+                  <th>Candidate</th>
+                  <th>Role</th>
+                  <th>Department</th>
+                  <th>Faculty Recommendation</th>
+                  <th>Interview Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(c => (
+                  <tr key={c.application_id}>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div className="avatar" style={{ width: 32, height: 32, fontSize: 12 }}>
+                          {c.candidate_name?.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: 13.5 }}>{c.candidate_name}</div>
+                          <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>{c.candidate_email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ fontSize: 13, color: 'var(--text-secondary)', maxWidth: 180 }}>
+                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.job_title}</div>
+                    </td>
+                    <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{c.department || '—'}</td>
+                    <td>
+                      {c.latest_recommendation ? (
+                        <span style={{
+                          padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+                          background: (REC_COLOR[c.latest_recommendation] || '#94A3B8') + '20',
+                          color: REC_COLOR[c.latest_recommendation] || '#94A3B8',
+                          border: `1px solid ${(REC_COLOR[c.latest_recommendation] || '#94A3B8')}40`,
+                        }}>
+                          {REC_LABEL[c.latest_recommendation] || c.latest_recommendation}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Not set</span>
+                      )}
+                    </td>
+                    <td>
+                      {c.final_interview_status ? (
+                        <span className={`badge ${c.final_interview_status === 'scheduled' ? 'badge-blue' : c.final_interview_status === 'completed' ? 'badge-green' : 'badge-gray'}`}>
+                          {c.final_interview_status}
+                        </span>
+                      ) : (
+                        <span className="badge badge-amber">Not Scheduled</span>
+                      )}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {c.final_interview_status === 'scheduled' ? (
+                          <button
+                            className="btn btn-primary"
+                            style={{ padding: '6px 12px', fontSize: 12 }}
+                            onClick={() => handleStartInterview({ id: c.final_interview_id, application_id: c.application_id, interview_type: c.final_interview_type || 'behavioral' })}
+                          >
+                            Start Interview
+                          </button>
+                        ) : c.final_interview_status !== 'completed' ? (
+                          <button
+                            className="btn btn-outline"
+                            style={{ padding: '6px 12px', fontSize: 12 }}
+                            onClick={() => handleScheduleInterview(c.application_id)}
+                            disabled={scheduling === c.application_id}
+                          >
+                            {scheduling === c.application_id ? 'Scheduling...' : 'Schedule Interview'}
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: 12, color: '#10B981', fontWeight: 600 }}>✓ Completed</span>
+                        )}
+                        <button
+                          className="btn btn-outline"
+                          style={{ padding: '6px 12px', fontSize: 12 }}
+                          onClick={() => navigate(`/chro/candidates/${c.candidate_id}`)}
+                        >
+                          View Profile
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {/* Scheduled Tab */}
+      {activeTab === 'schedule' && (
+        <div className="card">
+>>>>>>> e120a136d25f458c6cd80a5ba5a876b5be70dc41
           {scheduledInterviews.length === 0 ? (
             <div className="empty-state">No scheduled interviews</div>
           ) : (
@@ -145,13 +252,26 @@ export default function CHROInterviews() {
                     </td>
                     <td><span className="badge badge-blue">{i.status}</span></td>
                     <td>
-                      <button
-                        onClick={() => handleStartInterview(i.application_id)}
-                        className="btn btn-primary"
-                        style={{ padding: '6px 12px', fontSize: 12 }}
-                      >
-                        Start Interview
-                      </button>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {i.can_start && (
+                          <button
+                            onClick={() => handleStartInterview(i)}
+                            className="btn btn-primary"
+                            style={{ padding: '6px 12px', fontSize: 12 }}
+                          >
+                            Start Interview
+                          </button>
+                        )}
+                        {i.can_view_profile && i.candidate_id && (
+                          <button
+                            onClick={() => navigate(`/chro/candidates/${i.candidate_id}`)}
+                            className="btn btn-outline"
+                            style={{ padding: '6px 12px', fontSize: 12 }}
+                          >
+                            View Profile
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

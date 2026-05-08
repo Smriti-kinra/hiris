@@ -36,7 +36,8 @@ router.get('/pipeline/final-interview', requireAuth, requirePermission('can_view
       fi.id::text                   AS final_interview_id,
       fi.scheduled_at               AS final_interview_scheduled_at,
       fi.status                     AS final_interview_status,
-      fi.round                      AS final_interview_round
+      fi.round                      AS final_interview_round,
+      fi.interview_type             AS final_interview_type
     FROM applications a
     JOIN candidates c ON c.id = a.candidate_id
     JOIN jobs j ON j.id = a.job_id
@@ -53,6 +54,7 @@ router.get('/pipeline/final-interview', requireAuth, requirePermission('can_view
       SELECT i.*
       FROM interviews i
       WHERE i.application_id = a.id
+        AND COALESCE(i.interview_type, CASE WHEN LOWER(COALESCE(i.round, '')) LIKE '%technical%' THEN 'technical' ELSE 'behavioral' END) = 'behavioral'
       ORDER BY i.created_at DESC
       LIMIT 1
     ) fi ON true
@@ -105,9 +107,9 @@ router.post('/pipeline/schedule-final-interview', requireAuth, requirePermission
   }
 
   const { rows } = await query(`
-    INSERT INTO interviews (application_id, interviewer_id, scheduled_at, round, status, notes)
-    VALUES ($1, $2, $3, 'Final Interview', 'scheduled', $4)
-    RETURNING id::text, scheduled_at, status, round
+    INSERT INTO interviews (application_id, interviewer_id, scheduled_at, round, interview_type, status, notes)
+    VALUES ($1, $2, $3, 'Behavioral Interview', 'behavioral', 'scheduled', $4)
+    RETURNING id::text, scheduled_at, status, round, interview_type
   `, [application_id, interviewer_id || req.currentUser.userId, scheduled_at || null, notes || null])
 
   console.log(`[PIPELINE] Final interview scheduled: id=${rows[0].id}`)

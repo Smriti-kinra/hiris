@@ -5,10 +5,19 @@
  * Runs every *.sql file in ./migrations/ in filename order,
  * skipping any that have already been applied.
  */
-require('dotenv').config()
-const { Pool } = require('pg')
 const fs   = require('fs')
 const path = require('path')
+const { config: loadEnv } = require('dotenv')
+
+const envCandidates = [
+  path.join(__dirname, '.env'),
+  path.join(__dirname, '..', '..', 'backend', '.env'),
+  path.join(process.cwd(), '.env'),
+]
+const envPath = envCandidates.find(p => fs.existsSync(p))
+loadEnv({ path: envPath })
+
+const { Pool } = require('pg')
 
 async function migrate() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL })

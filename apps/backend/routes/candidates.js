@@ -161,8 +161,8 @@ router.patch('/candidates/:id/stage', requireAuth, requirePermission('can_move_c
       )
       if (existingRows.length === 0) {
         const { rows: schedRows } = await query(
-          `INSERT INTO interviews (application_id, interviewer_id, scheduled_at, round, status, notes)
-           VALUES ($1, $2, NOW() + INTERVAL '24 hours', 'Technical Interview', 'scheduled', 'Auto-scheduled on stage advancement')
+          `INSERT INTO interviews (application_id, interviewer_id, scheduled_at, round, interview_type, status, notes)
+           VALUES ($1, $2, NOW() + INTERVAL '24 hours', 'Technical Interview', 'technical', 'scheduled', 'Auto-scheduled on stage advancement')
            RETURNING id::text`,
           [application_id, req.currentUser.userId]
         )

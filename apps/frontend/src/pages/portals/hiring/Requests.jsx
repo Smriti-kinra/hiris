@@ -11,6 +11,7 @@ const STATUS_BADGE = {
   'Sent for Approval': 'badge-blue',
   'Approved':          'badge-green',
   'Rejected':          'badge-red',
+  'Posted':            'badge-green',
 }
 
 export default function HiringRequests() {
@@ -126,13 +127,18 @@ export default function HiringRequests() {
                           style={{ padding: '4px 10px', fontSize: 11, minHeight: 'unset' }}
                           onClick={(e) => {
                             e.stopPropagation();
-                            apiFetch(`/hiring-requests/${r.id}/status`, {
-                              method: 'PATCH',
-                              body: JSON.stringify({ action: 'post' })
-                            }).then(() => {
+                            apiFetch(`/hiring-requests/${r.id}/post`, {
+                              method: 'POST'
+                            }).then(async (res) => {
+                              const data = await res.json().catch(() => ({}));
+                              if (!res.ok) throw new Error(data?.error || 'Failed to post job');
                               toast.success('Job posting is now live!');
                               setRequests(prev => prev.map(req => req.id === r.id ? { ...req, status: 'Posted' } : req));
-                            }).catch(err => console.error(err));
+                              setTimeout(() => navigate('/hiring/posted-jobs'), 500);
+                            }).catch(err => {
+                              console.error(err);
+                              toast.error('Failed to post job');
+                            });
                           }}
                         >
                           Post

@@ -6,26 +6,29 @@ const pdfParse = require('pdf-parse')
 const path = require('path')
 const fs = require('fs')
 const { query } = require('../config/db')
-const { requireAuth } = require('../middleware/auth')
+const { requireAuth, hasPermission } = require('../middleware/auth')
 const { generateBehavioralQuestions, generateApplicationSummary } = require('../services/gemini')
 
 const upload = multer({ dest: 'uploads/' })
 
 router.post('/jobs/:id/post', requireAuth, async (req, res) => {
   const { id } = req.params
+  if (!hasPermission(req.currentUser, 'can_post_jobs')) {
+    return res.status(403).json({ error: 'Access denied: missing permission can_post_jobs' })
+  }
   
   // Verify job exists
-  const jobRes = await query(`SELECT * FROM jobs WHERE id = $1`, [id])
+  const jobRes = await query(`SELECT * FROM jobs WHERE id = $1 AND org_id = $2`, [id, req.currentUser.orgId])
   if (jobRes.rows.length === 0) return res.status(404).json({ error: 'Job not found' })
   
   // Set job status to active
-  await query(`UPDATE jobs SET status = 'active' WHERE id = $1`, [id])
+  await query(`UPDATE jobs SET status = 'active', posted_at = NOW(), manager_id = $2 WHERE id = $1 AND org_id = $3`, [id, req.currentUser.userId, req.currentUser.orgId])
   
   // Create or get public job link
-  let linkRes = await query(`SELECT * FROM public_job_links WHERE job_id = $1`, [id])
+  let linkRes = await query(`SELECT * FROM public_job_links WHERE job_id = $1 AND active = true ORDER BY created_at DESC LIMIT 1`, [id])
   if (linkRes.rows.length === 0) {
     const token = crypto.randomBytes(16).toString('hex')
-    linkRes = await query(`INSERT INTO public_job_links (job_id, token) VALUES ($1, $2) RETURNING *`, [id, token])
+    linkRes = await query(`INSERT INTO public_job_links (job_id, token, active) VALUES ($1, $2, true) RETURNING *`, [id, token])
   }
   
   res.json({ success: true, token: linkRes.rows[0].token })

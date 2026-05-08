@@ -1,7 +1,43 @@
 const express = require('express')
 const router  = express.Router()
+const crypto = require('crypto')
 const { query }       = require('../config/db')
 const { requireAuth, requirePermission, requireAnyPermission, hasPermission } = require('../middleware/auth')
+
+async function ensurePublicJobLink(jobId) {
+  const existing = await query(
+    `SELECT token FROM public_job_links WHERE job_id=$1 AND active=true ORDER BY created_at DESC LIMIT 1`,
+    [jobId]
+  )
+  if (existing.rows[0]?.token) return existing.rows[0].token
+
+  const token = crypto.randomBytes(16).toString('hex')
+  const created = await query(
+    `INSERT INTO public_job_links (job_id, token, active) VALUES ($1, $2, true) RETURNING token`,
+    [jobId, token]
+  )
+  return created.rows[0].token
+}
+
+async function getPostedJob(jobId, orgId) {
+  const { rows } = await query(`
+    SELECT j.id::text AS id, j.title, j.department, j.status, j.job_type,
+      COALESCE(j.urgency,'medium') AS urgency, j.description, j.location, j.posted_at,
+      u.name AS manager, hr.id::text AS request_id, requester.name AS requested_by,
+      COUNT(a.id)::int AS candidates_count,
+      pjl.token AS public_token
+    FROM jobs j
+    LEFT JOIN users u ON u.id=j.manager_id
+    LEFT JOIN headcount_requests hr ON hr.job_id=j.id
+    LEFT JOIN users requester ON requester.id=hr.requested_by
+    LEFT JOIN applications a ON a.job_id=j.id
+    LEFT JOIN public_job_links pjl ON pjl.job_id=j.id AND pjl.active=true
+    WHERE j.id=$1 AND j.org_id=$2
+    GROUP BY j.id,j.title,j.department,j.status,j.job_type,j.urgency,j.description,j.location,
+      j.posted_at,u.name,hr.id,requester.name,pjl.token
+  `, [jobId, orgId])
+  return rows[0]
+}
 
 // ─── Dashboard Stats ──────────────────────────────────────────────────────────
 router.get('/dashboard/stats', requireAuth, requirePermission('can_view_analytics'), async (req, res) => {
@@ -150,6 +186,77 @@ router.get('/active-openings', requireAuth, requirePermission('can_view_jobs'), 
   res.json(rows)
 })
 
+// Posted Jobs for the hiring manager dashboard
+router.get('/hiring/posted-jobs', requireAuth, requirePermission('can_view_jobs'), async (req, res) => {
+  const { rows } = await query(`
+    SELECT j.id::text AS id, j.title, j.department, j.status, j.job_type,
+      COALESCE(j.urgency,'medium') AS urgency, j.description, j.location, j.posted_at,
+      u.name AS manager, hr.id::text AS request_id, requester.name AS requested_by,
+      COUNT(a.id)::int AS candidates_count,
+      pjl.token AS public_token
+    FROM jobs j
+    LEFT JOIN users u ON u.id=j.manager_id
+    LEFT JOIN headcount_requests hr ON hr.job_id=j.id
+    LEFT JOIN users requester ON requester.id=hr.requested_by
+    LEFT JOIN applications a ON a.job_id=j.id
+    LEFT JOIN public_job_links pjl ON pjl.job_id=j.id AND pjl.active=true
+    WHERE j.org_id=$1 AND j.status='active'
+    GROUP BY j.id,j.title,j.department,j.status,j.job_type,j.urgency,j.description,j.location,
+      j.posted_at,u.name,hr.id,requester.name,pjl.token
+    ORDER BY j.posted_at DESC NULLS LAST, j.id DESC
+  `, [req.currentUser.orgId])
+  res.json(rows)
+})
+
+router.post('/hiring-requests/:id/post', requireAuth, async (req, res) => {
+  const { id } = req.params
+  const perms = req.currentUser?.permissions || {}
+  const isHiring = req.currentUser?.portal === 'hiring' || req.currentUser?.role === 'hiring_manager'
+  if (!(perms.is_admin || perms.can_post_jobs || isHiring)) {
+    return res.status(403).json({ error: 'Access denied: missing permission can_post_jobs' })
+  }
+
+  const requestRes = await query(
+    `SELECT hr.id, hr.job_id, hr.status, hr.jd_json
+     FROM headcount_requests hr
+     JOIN jobs j ON j.id=hr.job_id
+     WHERE hr.id=$1 AND hr.org_id=$2`,
+    [id, req.currentUser.orgId]
+  )
+  const requestRow = requestRes.rows[0]
+  if (!requestRow) return res.status(404).json({ error: 'Request not found' })
+  if (!['approved', 'posted'].includes(requestRow.status)) {
+    return res.status(409).json({ error: 'Only approved requests can be posted.' })
+  }
+
+  const jd = requestRow.jd_json || {}
+  await query(`UPDATE headcount_requests SET status='posted' WHERE id=$1 AND org_id=$2`, [id, req.currentUser.orgId])
+  await query(
+    `UPDATE jobs
+     SET status='active',
+       posted_at=NOW(),
+       manager_id=$3,
+       title=COALESCE(NULLIF($4, ''), title),
+       department=COALESCE(NULLIF($5, ''), department),
+       location=COALESCE(NULLIF($6, ''), location),
+       description=COALESCE(NULLIF($7, ''), description)
+     WHERE id=$1 AND org_id=$2`,
+    [
+      requestRow.job_id,
+      req.currentUser.orgId,
+      req.currentUser.userId,
+      jd.title || null,
+      jd.department || null,
+      jd.location || null,
+      jd.summary || null,
+    ]
+  )
+
+  const token = await ensurePublicJobLink(requestRow.job_id)
+  const job = await getPostedJob(requestRow.job_id, req.currentUser.orgId)
+  res.json({ success: true, token, job: { ...job, public_token: token } })
+})
+
 // ─── Jobs (full list) ─────────────────────────────────────────────────────────
 router.get('/jobs', requireAuth, requirePermission('can_view_jobs'), async (req, res) => {
   const page = parseInt(req.query.page)
@@ -189,9 +296,19 @@ router.get('/interviews', requireAuth, requireAnyPermission(['can_view_interview
 
   const activeFilter = req.query.active === 'true' ? "AND a.stage NOT IN ('offered', 'hired', 'rejected', 'archived')" : ''
   const queryStr = `
-    SELECT i.id::text AS id, i.application_id::text AS application_id, i.scheduled_at, i.round, i.status, i.notes, i.calendly_link,
+    SELECT i.id::text AS id, i.application_id::text AS application_id,
+      c.id::text AS candidate_id, i.scheduled_at, i.round,
+      COALESCE(i.interview_type,
+        CASE
+          WHEN LOWER(COALESCE(i.round, '')) LIKE '%technical%' THEN 'technical'
+          ELSE 'behavioral'
+        END
+      ) AS interview_type,
+      i.status, i.notes, i.calendly_link,
       c.name AS candidate_name, c.email AS candidate_email,
-      j.title AS job_title, j.department, u.name AS interviewer_name, a.stage
+      j.title AS job_title, j.department, u.name AS interviewer_name, a.stage,
+      (i.status='scheduled' AND a.stage = ANY(r.visible_stages)) AS can_start,
+      (a.stage = ANY(r.visible_stages)) AS can_view_profile
     FROM interviews i
     JOIN applications a ON a.id=i.application_id
     JOIN candidates  c ON c.id=a.candidate_id
@@ -200,7 +317,7 @@ router.get('/interviews', requireAuth, requireAnyPermission(['can_view_interview
     JOIN users req_user ON req_user.id = $1
     JOIN roles r ON r.id = req_user.role_id
     WHERE a.org_id = $2 AND a.stage = ANY(r.visible_stages) ${activeFilter}
-    ORDER BY i.scheduled_at ASC
+    ORDER BY i.scheduled_at ASC NULLS LAST, i.id DESC
     ${page ? 'LIMIT $3 OFFSET $4' : ''}`
 
   const params = page ? [req.currentUser.userId, req.currentUser.orgId, limit, offset] : [req.currentUser.userId, req.currentUser.orgId]
@@ -295,11 +412,21 @@ router.patch('/hiring-requests/:id/status', requireAuth, async (req, res) => {
   // If posting, activate the associated job posting
   if (action === 'post') {
     await query(
-      `UPDATE jobs SET status='active' WHERE id=(
+      `UPDATE jobs SET status='active', posted_at=NOW() WHERE id=(
          SELECT job_id FROM headcount_requests WHERE id=$1 AND org_id=$2
        ) AND org_id=$2`,
       [id, req.currentUser.orgId]
     ).catch(() => {}) // non-fatal — job may not exist
+  }
+
+  if (action === 'post' && !rows[0].token) {
+    const jobLookup = await query(
+      `SELECT job_id FROM headcount_requests WHERE id=$1 AND org_id=$2`,
+      [id, req.currentUser.orgId]
+    )
+    if (jobLookup.rows[0]?.job_id) {
+      rows[0].token = await ensurePublicJobLink(jobLookup.rows[0].job_id)
+    }
   }
 
   res.json(rows[0])

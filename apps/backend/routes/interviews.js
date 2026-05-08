@@ -17,35 +17,93 @@ const audioStorage = multer.diskStorage({
 })
 const audioUpload = multer({ storage: audioStorage, limits: { fileSize: 200 * 1024 * 1024 } })
 
-// ─── Start an Interview Session ─────────────────────────────────────────────
-router.post('/interviews/start', requireAuth, requirePermission('can_conduct_interview'), async (req, res) => {
-  const { application_id, type } = req.body
-  if (!application_id || !['technical', 'behavioral'].includes(type)) {
-    return res.status(400).json({ error: 'Valid application_id and type (technical/behavioral) required.' })
+async function startInterviewSession({ applicationId, type, userId, orgId, scheduleId = null }) {
+  if (!applicationId || !['technical', 'behavioral'].includes(type)) {
+    const err = new Error('Valid application_id and type (technical/behavioral) required.')
+    err.status = 400
+    throw err
   }
-
-  console.log(`[INTERVIEW] Starting ${type} interview for application=${application_id} by user=${req.currentUser.userId}`)
 
   const { rows: appRows } = await query(
     `SELECT candidate_id, stage FROM applications WHERE id=$1 AND org_id=$2`,
-    [application_id, req.currentUser.orgId]
+    [applicationId, orgId]
   )
-  if (!appRows[0]) return res.status(404).json({ error: 'Application not found.' })
-
-  console.log(`[INTERVIEW] Application stage=${appRows[0].stage}, candidate_id=${appRows[0].candidate_id}`)
+  if (!appRows[0]) {
+    const err = new Error('Application not found.')
+    err.status = 404
+    throw err
+  }
 
   const { rows } = await query(
     `INSERT INTO interview_sessions (application_id, interviewer_id, type, status)
      VALUES ($1, $2, $3, 'ongoing')
      RETURNING id::text, type, status, started_at`,
-    [application_id, req.currentUser.userId, type]
+    [applicationId, userId, type]
   )
 
-  console.log(`[INTERVIEW] Session created: id=${rows[0].id} type=${type}`)
-  res.status(201).json({ ...rows[0], candidate_id: appRows[0]?.candidate_id })
+  if (scheduleId) {
+    await query(
+      `UPDATE interviews
+       SET interviewer_id=$1
+       WHERE id=$2 AND application_id=$3 AND status='scheduled'`,
+      [userId, scheduleId, applicationId]
+    )
+  }
+
+  return { ...rows[0], candidate_id: appRows[0].candidate_id, stage: appRows[0].stage }
+}
+
+// ─── Start an Interview Session ─────────────────────────────────────────────
+router.post('/interviews/start', requireAuth, requirePermission('can_conduct_interview'), async (req, res) => {
+  const { application_id, type } = req.body
+  console.log(`[INTERVIEW] Starting ${type} interview for application=${application_id} by user=${req.currentUser.userId}`)
+
+  try {
+    const session = await startInterviewSession({
+      applicationId: application_id,
+      type,
+      userId: req.currentUser.userId,
+      orgId: req.currentUser.orgId,
+    })
+    console.log(`[INTERVIEW] Session created: id=${session.id} type=${type}`)
+    res.status(201).json(session)
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message || 'Failed to start interview.' })
+  }
 })
 
 // ─── Get Interview Session ──────────────────────────────────────────────────
+router.post('/interviews/scheduled/:id/start', requireAuth, requirePermission('can_conduct_interview'), async (req, res) => {
+  const { rows } = await query(
+    `SELECT i.id, i.application_id,
+      COALESCE(i.interview_type,
+        CASE
+          WHEN LOWER(COALESCE(i.round, '')) LIKE '%technical%' THEN 'technical'
+          ELSE 'behavioral'
+        END
+      ) AS interview_type
+     FROM interviews i
+     JOIN applications a ON a.id=i.application_id
+     WHERE i.id=$1 AND a.org_id=$2 AND i.status='scheduled'`,
+    [req.params.id, req.currentUser.orgId]
+  )
+  const schedule = rows[0]
+  if (!schedule) return res.status(404).json({ error: 'Scheduled interview not found.' })
+
+  try {
+    const session = await startInterviewSession({
+      applicationId: schedule.application_id,
+      type: schedule.interview_type,
+      userId: req.currentUser.userId,
+      orgId: req.currentUser.orgId,
+      scheduleId: schedule.id,
+    })
+    res.status(201).json(session)
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message || 'Failed to start scheduled interview.' })
+  }
+})
+
 router.get('/interviews/:id', requireAuth, requireAnyPermission(['can_view_interviews', 'can_conduct_interview']), async (req, res) => {
   const { rows } = await query(
     `SELECT s.*, c.name AS candidate_name, c.id AS candidate_id, j.title AS job_title, a.id AS app_id, a.stage
@@ -332,6 +390,21 @@ router.post('/interviews/:id/proceed', requireAuth, requirePermission('can_condu
        VALUES ($1, $2, $3, $4, $5, $6)`,
       [application_id, candidate_id, stage, nextStage, req.currentUser.userId, `Proceeded after ${type} interview (session ${req.params.id})`]
     ).catch(err => console.error(`[PIPELINE] Stage history insert failed (non-fatal): ${err.message}`))
+
+    if (nextStage === 'behavioral_interview') {
+      await query(
+        `INSERT INTO interviews (application_id, interviewer_id, scheduled_at, round, interview_type, status, notes)
+         SELECT $1, NULL, NOW() + INTERVAL '24 hours', 'Behavioral Interview', 'behavioral', 'scheduled',
+                'Auto-scheduled after faculty technical approval'
+         WHERE NOT EXISTS (
+           SELECT 1 FROM interviews
+           WHERE application_id=$1
+             AND status='scheduled'
+             AND COALESCE(interview_type, CASE WHEN LOWER(COALESCE(round, '')) LIKE '%technical%' THEN 'technical' ELSE 'behavioral' END) = 'behavioral'
+         )`,
+        [application_id]
+      )
+    }
 
     await query('COMMIT')
     console.log(`[PIPELINE] Application ${application_id} successfully moved to ${nextStage}`)

@@ -6,7 +6,18 @@
  *
  * Usage: node seed-passwords.js
  */
-require('dotenv').config()
+const fs   = require('fs')
+const path = require('path')
+const { config: loadEnv } = require('dotenv')
+
+const envCandidates = [
+  path.join(__dirname, '.env'),
+  path.join(__dirname, '..', '..', 'backend', '.env'),
+  path.join(process.cwd(), '.env'),
+]
+const envPath = envCandidates.find(p => fs.existsSync(p))
+loadEnv({ path: envPath })
+
 const bcrypt = require('bcryptjs')
 const { Pool } = require('pg')
 

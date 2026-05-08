@@ -8,7 +8,7 @@
  */
 
 const request = require('supertest')
-const { buildApp, seedTestOrg, teardownTestOrg, mintCookie, closePool } = require('./helpers')
+const { buildApp, seedTestOrg, teardownTestOrg, mintCookie, closePool, dbQuery } = require('./helpers')
 
 let app, ctx
 
@@ -140,6 +140,30 @@ describe('POST /api/hiring-requests', () => {
 
       expect(res.status).toBe(200)
       expect(res.body.status).toBe('Approved')
+    })
+
+    it('posts an approved request and exposes it in hiring posted jobs', async () => {
+      const post = await request(app)
+        .post(`/api/hiring-requests/${createdRequestId}/post`)
+        .set('Cookie', mintCookie(ctx.admin))
+
+      expect(post.status).toBe(200)
+      expect(post.body.success).toBe(true)
+      expect(post.body.token).toBeTruthy()
+      expect(post.body.job).toMatchObject({
+        title: 'Professor of Physics',
+        status: 'active',
+      })
+
+      const postedJobs = await request(app)
+        .get('/api/hiring/posted-jobs')
+        .set('Cookie', mintCookie(ctx.admin))
+
+      expect(postedJobs.status).toBe(200)
+      expect(postedJobs.body.some(job => job.id === post.body.job.id)).toBe(true)
+
+      const dbJob = await dbQuery(`SELECT status, manager_id FROM jobs WHERE id=$1`, [post.body.job.id])
+      expect(dbJob.rows[0]).toMatchObject({ status: 'active', manager_id: ctx.admin.id })
     })
 
     it('can reject a request and returns the updated status', async () => {
