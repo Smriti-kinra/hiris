@@ -151,7 +151,7 @@ export default function Archive() {
                   {employees.length === 0 ? (
                     <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>No employees found. Hire a candidate to see them here.</td></tr>
                   ) : employees.map(e => (
-                    <tr key={e.id}>
+                    <tr key={e.id} style={{ cursor: e.candidate_id ? 'pointer' : 'default' }} onClick={() => e.candidate_id && navigate(`/chro/candidates/${e.candidate_id}`)}>
                       <td>
                         <div style={{ fontWeight: 600 }}>{e.name}</div>
                         <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{e.email}</div>

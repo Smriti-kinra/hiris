@@ -1,0 +1,10 @@
+You mentioned reducing the p99 latency of the Order Management microservice from 320ms to 190ms; walk me through your diagnostic process to identify those specific bottlenecks and how you validated the impact of your caching strategy.
+Describe the biggest technical challenge you faced while migrating the four monolithic modules to microservices and how you ensured zero downtime during that transition.
+When designing the real-time inventory sync pipeline using Kafka and Redis, what were the most critical trade-offs you had to make regarding data consistency versus system availability?
+In your work on the fraud detection module at Paytm, how did you balance the integration of rule-based logic with ML model scoring to minimize false positives?
+Tell me about a time when a system design you proposed faced significant pushback from stakeholders or your team; how did you handle that situation and what was the outcome?
+You mentored three junior engineers with two achieving promotions; what is your specific framework for balancing the delegation of tasks with the need to maintain high-quality code standards?
+Beyond the technical implementation, how do you work with Product and Data Science teams to ensure that backend optimizations translate directly into improved customer metrics like your 12% CSAT increase?
+During your 24x7 on-call rotation at Paytm, describe the most complex P1 incident you resolved; how did you maintain composure and execute a resolution under pressure?
+Given your experience with both AWS and GCP, how do you approach selecting a cloud provider or architecture pattern when starting a new service from scratch?
+What specific technical areas do you feel you need to develop further to transition from an SDE-2 to a Senior/Staff level role, and how are you proactively working on those gaps?

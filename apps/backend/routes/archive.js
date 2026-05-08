@@ -33,7 +33,11 @@ router.get('/archive/candidates', requireAuth, requirePermission('can_view_candi
     where += ` AND (c.name ILIKE $${idx} OR c.email ILIKE $${idx} OR j.title ILIKE $${idx})`
     params.push(`%${search}%`); idx++
   }
-  if (stage) { where += ` AND a.stage = $${idx}`; params.push(stage); idx++ }
+  if (stage) { 
+    where += ` AND a.stage = $${idx}`; params.push(stage); idx++ 
+  } else {
+    where += ` AND a.stage IN ('offered', 'hired', 'rejected', 'archived', 'final_review')`
+  }
   if (department) { where += ` AND j.department = $${idx}`; params.push(department); idx++ }
   if (min_score) { where += ` AND c.ai_score >= $${idx}`; params.push(min_score); idx++ }
   if (max_score) { where += ` AND c.ai_score <= $${idx}`; params.push(max_score); idx++ }

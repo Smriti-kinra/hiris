@@ -1,0 +1,55 @@
+As an LLM judge, I have evaluated the 10 generated questions against your prompt and the provided documents (Resume and Cover Letter). Here is the assessment:
+
+### **1. Accuracy & Compliance**
+
+* **Instruction Adherence:** The API successfully followed the "exactly 10 questions" and "one per line" constraints.
+* **Constraint Breach:** The API **failed** the negative constraint to "Return ONLY a plain text list" and "Do not include markdown." It rendered the response using Markdown formatting rather than raw plain text.
+* **Fact-Checking:** Every question is rooted in specific facts from the documents:
+* Latency reduction (320ms to 190ms).
+
+
+* Migration of 4 monolithic modules.
+
+
+* Inventory sync via Kafka/Redis.
+
+
+* Fraud detection at Paytm.
+
+
+* CSAT increase of 12%.
+
+
+* Mentorship of 3 juniors/2 promotions.
+
+
+
+
+
+### **2. Relevance**
+
+* **Contextual Alignment:** The questions are highly relevant. They target the candidate's most "impactful" claims.
+
+
+* 
+**Role Appropriateness:** For an SDE-II role , the questions correctly balance deep technical execution (caching, Kafka, microservices) with emerging leadership skills (mentorship, cross-functional collaboration).
+
+
+
+### **3. "Goodness" (Quality & Depth)**
+
+* **Probing Nature:** The questions are excellent because they move beyond "What did you do?" to "How and why?" For example, asking for the *diagnostic process* for latency or *trade-offs* in system availability forces the candidate to demonstrate high-level architectural thinking.
+* 
+**Balanced Evaluation:** The set covers the full spectrum of a senior engineer's lifecycle: system design, operational excellence (on-call), leadership, and product impact.
+
+
+* 
+**Constructive Critique:** While the questions are strong, the final question about "transitioning to Senior/Staff level" is a standard career question but very effective for gauging self-awareness and growth mindset.
+
+
+
+### **Final Verdict**
+
+The content of the questions is **excellent** and perfectly tailored to the candidate's profile. However, the API's output format failed your "ONLY plain text" and "no markdown" instruction.
+
+How would you like to refine the output format for future generations?

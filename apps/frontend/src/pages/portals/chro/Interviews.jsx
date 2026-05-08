@@ -96,7 +96,7 @@ export default function CHROInterviews() {
         <div>
           <div className="page-title">Schedule</div>
           <div className="page-subtitle">
-            {candidates.length} candidate{candidates.length !== 1 ? 's' : ''} ready for behavioral or final interviews
+            {scheduledInterviews.length} scheduled interview{scheduledInterviews.length !== 1 ? 's' : ''}
           </div>
         </div>
         <button className="btn btn-outline" onClick={() => { loadPipeline(); loadScheduled(); toast.info('Refreshed') }} style={{ fontSize: 13 }}>
@@ -108,148 +108,10 @@ export default function CHROInterviews() {
         </button>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 0 }}>
-        {[
-          { key: 'pipeline', label: `Needs Scheduling (${candidates.length})` },
-          { key: 'schedule', label: `Scheduled (${scheduledInterviews.length})` },
-        ].map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            style={{
-              padding: '10px 20px', fontSize: 13, fontWeight: 600, border: 'none',
-              background: 'transparent', cursor: 'pointer',
-              borderBottom: activeTab === tab.key ? '2px solid var(--brand)' : '2px solid transparent',
-              color: activeTab === tab.key ? 'var(--brand)' : 'var(--text-secondary)',
-              transition: 'all 0.15s',
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
 
-      {/* Pipeline Tab */}
-      {activeTab === 'pipeline' && (
-        <div className="card">
-          <div className="card-pad" style={{ borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <input
-              className="hiris-input"
-              placeholder="Search by name, role, or department..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              style={{ maxWidth: 340 }}
-            />
-            <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 'auto' }}>
-              {filtered.length} of {candidates.length} shown
-            </span>
-          </div>
 
-          {loading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}><div className="spinner" /></div>
-          ) : filtered.length === 0 ? (
-            <div className="empty-state">
-              <div style={{ marginBottom: 8 }}>No candidates in Final Interview pipeline</div>
-              <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                Candidates appear here after faculty approve them in the Technical Interview.
-              </div>
-            </div>
-          ) : (
-            <table className="hiris-table">
-              <thead>
-                <tr>
-                  <th>Candidate</th>
-                  <th>Role</th>
-                  <th>Department</th>
-                  <th>Faculty Recommendation</th>
-                  <th>Interview Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(c => (
-                  <tr key={c.application_id}>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div className="avatar" style={{ width: 32, height: 32, fontSize: 12 }}>
-                          {c.candidate_name?.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
-                        </div>
-                        <div>
-                          <div style={{ fontWeight: 600, fontSize: 13.5 }}>{c.candidate_name}</div>
-                          <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>{c.candidate_email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td style={{ fontSize: 13, color: 'var(--text-secondary)', maxWidth: 180 }}>
-                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.job_title}</div>
-                    </td>
-                    <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{c.department || '—'}</td>
-                    <td>
-                      {c.latest_recommendation ? (
-                        <span style={{
-                          padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700,
-                          background: (REC_COLOR[c.latest_recommendation] || '#94A3B8') + '20',
-                          color: REC_COLOR[c.latest_recommendation] || '#94A3B8',
-                          border: `1px solid ${(REC_COLOR[c.latest_recommendation] || '#94A3B8')}40`,
-                        }}>
-                          {REC_LABEL[c.latest_recommendation] || c.latest_recommendation}
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Not set</span>
-                      )}
-                    </td>
-                    <td>
-                      {c.final_interview_status ? (
-                        <span className={`badge ${c.final_interview_status === 'scheduled' ? 'badge-blue' : c.final_interview_status === 'completed' ? 'badge-green' : 'badge-gray'}`}>
-                          {c.final_interview_status}
-                        </span>
-                      ) : (
-                        <span className="badge badge-amber">Not Scheduled</span>
-                      )}
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        {c.final_interview_status === 'scheduled' ? (
-                          <button
-                            className="btn btn-primary"
-                            style={{ padding: '6px 12px', fontSize: 12 }}
-                            onClick={() => handleStartInterview(c.application_id)}
-                          >
-                            Start Final Interview
-                          </button>
-                        ) : c.final_interview_status !== 'completed' ? (
-                          <button
-                            className="btn btn-outline"
-                            style={{ padding: '6px 12px', fontSize: 12 }}
-                            onClick={() => handleScheduleInterview(c.application_id)}
-                            disabled={scheduling === c.application_id}
-                          >
-                            {scheduling === c.application_id ? 'Scheduling...' : 'Schedule Interview'}
-                          </button>
-                        ) : (
-                          <span style={{ fontSize: 12, color: '#10B981', fontWeight: 600 }}>✓ Completed</span>
-                        )}
-                        <button
-                          className="btn btn-outline"
-                          style={{ padding: '6px 12px', fontSize: 12 }}
-                          onClick={() => navigate(`/chro/candidates/${c.candidate_id}`)}
-                        >
-                          View Profile
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      )}
-
-      {/* Scheduled Tab */}
-      {activeTab === 'schedule' && (
-        <div className="card">
+      {/* Scheduled Interviews */}
+      <div className="card">
           {scheduledInterviews.length === 0 ? (
             <div className="empty-state">No scheduled interviews</div>
           ) : (
@@ -297,7 +159,6 @@ export default function CHROInterviews() {
             </table>
           )}
         </div>
-      )}
     </AppShell>
   )
 }
