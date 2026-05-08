@@ -8,7 +8,6 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import PortalGuard from '../../components/PortalGuard'
 import ProtectedRoute from '../../components/ProtectedRoute'
 
-const LoginPage        = lazy(() => import('../../pages/auth/LoginPage'))
 const HiringDashboard  = lazy(() => import('../../pages/portals/hiring/Dashboard'))
 const HiringCandidates = lazy(() => import('../../pages/portals/hiring/Candidates'))
 const HiringRequests   = lazy(() => import('../../pages/portals/hiring/Requests'))
@@ -24,7 +23,6 @@ export default function RecruiterRoutes() {
   return (
     <Suspense fallback={<Loading />}>
       <Routes>
-        <Route path="/login" element={<LoginPage />} />
 
         {/* Recruiter role maps to 'hiring' portal pages */}
         <Route element={<PortalGuard portalId="recruiter" />}>

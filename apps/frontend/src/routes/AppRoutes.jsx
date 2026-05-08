@@ -50,7 +50,14 @@ function DashboardRedirect() {
   const { user, loading } = useAuth()
 
   if (loading) return <LoadingFallback />
-  if (!user) return <Navigate to="/login" replace />
+  if (!user) {
+    const landingUrl = import.meta.env.VITE_PORTAL_URL_LANDING || 'http://localhost:5173'
+    if (window.location.origin !== landingUrl) {
+      window.location.href = landingUrl + '/login'
+      return null
+    }
+    return <Navigate to="/login" replace />
+  }
   const perms = user.permissions || {}
   const can = key => !!(perms[key] || perms.is_admin)
   const firstAllowed =

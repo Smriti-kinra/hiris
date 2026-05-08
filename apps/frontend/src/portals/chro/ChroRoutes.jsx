@@ -7,7 +7,6 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import PortalGuard from '../../components/PortalGuard'
 import ProtectedRoute from '../../components/ProtectedRoute'
 
-const LoginPage        = lazy(() => import('../../pages/auth/LoginPage'))
 const CHRODashboard    = lazy(() => import('../../pages/portals/chro/Dashboard'))
 const CHROCandidates   = lazy(() => import('../../pages/portals/chro/Candidates'))
 const CHROInterviews   = lazy(() => import('../../pages/portals/chro/Interviews'))
@@ -26,7 +25,6 @@ export default function ChroRoutes() {
   return (
     <Suspense fallback={<Loading />}>
       <Routes>
-        <Route path="/login" element={<LoginPage />} />
 
         <Route element={<PortalGuard portalId="chro" />}>
           <Route element={<ProtectedRoute requiredPermission="can_view_analytics" />}>
