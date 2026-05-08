@@ -16,9 +16,9 @@ export default function PostedJobs() {
   const [copyingId, setCopyingId] = useState(null)
 
   const loadJobs = () => {
-    apiFetch('/jobs')
+    apiFetch('/hiring/posted-jobs')
       .then(r => r.json())
-      .then(d => setJobs(Array.isArray(d) ? d.filter(j => j.status === 'active') : []))
+      .then(d => setJobs(Array.isArray(d) ? d : []))
       .catch(() => setJobs([]))
       .finally(() => setLoading(false))
   }

@@ -1,47 +1,35 @@
 [
   {
-    "id": "cand_1",
-    "job_description": "Senior Software Engineer. Required: 5+ years experience in React and Node.js. Experience with PostgreSQL and Docker. Strong system design skills.",
-    "resume": "John Doe. Senior Full Stack Developer with 6 years of experience. Expertise in React, Node.js, and Express. Proficient in Postgres and MongoDB. Led the migration of a monolithic app to microservices using Docker and Kubernetes. Designed scalable system architectures for high-traffic platforms.",
+    "id": "rtjm_001_full_stack_faculty_platform",
+    "input": {
+      "resume_text": "Aarav Mehta is a senior full-stack engineer with 7 years of experience building React and Node.js applications for university SaaS platforms. He has led PostgreSQL schema design, Docker-based deployments, accessibility improvements, and API integrations with HR systems. He has mentored junior engineers and owned production incident reviews.",
+      "job_description": "HIRIS is hiring a Senior Full Stack Engineer to build hiring workflow tools. Requirements: 5+ years of React and Node.js experience, PostgreSQL, Docker, secure API design, production ownership, and strong collaboration with HR stakeholders."
+    },
     "ground_truth": {
-      "expected_score_range": [85, 100],
-      "reasoning_keywords": ["strong match", "React", "Node.js", "PostgreSQL", "Docker", "system design", "6 years"]
+      "suitability_score": 9,
+      "rationale": "This is a very strong match. The candidate exceeds the experience requirement, directly matches React, Node.js, PostgreSQL, Docker, secure API/platform ownership, and has relevant HR/university SaaS stakeholder experience. Minor uncertainty remains only around explicit security depth."
     }
   },
   {
-    "id": "cand_2",
-    "job_description": "Senior Software Engineer. Required: 5+ years experience in React and Node.js. Experience with PostgreSQL and Docker. Strong system design skills.",
-    "resume": "Jane Smith. Junior Developer. 1 year experience with Python and Django. Familiar with HTML and CSS. Eager to learn.",
+    "id": "rtjm_002_ml_screening_researcher",
+    "input": {
+      "resume_text": "Nisha Rao has 4 years of applied machine learning experience using Python, pandas, scikit-learn, and PyTorch. She built resume parsing prototypes, candidate ranking experiments, and bias-monitoring dashboards. She has deployed batch models but has limited experience with LLM prompt evaluation or production hiring compliance.",
+      "job_description": "HIRIS needs an AI Engineer for resume-to-job matching. Requirements: Python, ML model evaluation, LLM prompting, retrieval or semantic matching, responsible AI practices, and experience shipping production AI features in HR or recruiting workflows."
+    },
     "ground_truth": {
-      "expected_score_range": [0, 30],
-      "reasoning_keywords": ["lacks experience", "no React", "no Node.js", "Python", "junior"]
+      "suitability_score": 7,
+      "rationale": "The candidate is a good but incomplete match. She has strong Python, ML evaluation, resume parsing, ranking, and bias-monitoring experience, which are highly relevant. Gaps include limited LLM evaluation, semantic retrieval, production AI ownership, and formal hiring compliance exposure."
     }
   },
   {
-    "id": "cand_3",
-    "job_description": "Data Scientist. Required: Master's degree. 3+ years experience with Python, Pandas, and scikit-learn. Experience building machine learning models for natural language processing.",
-    "resume": "Alice Johnson. Education: MS in Computer Science. Experience: 4 years as a Data Analyst using Python, SQL, and Tableau. Built predictive models using scikit-learn. No direct NLP experience, mostly tabular data.",
+    "id": "rtjm_003_operations_coordinator_to_ai_engineer",
+    "input": {
+      "resume_text": "Rohan Kapoor has 3 years as a recruiting operations coordinator. He managed interview scheduling, ATS cleanup, candidate communication, and hiring dashboards in spreadsheets. He completed an introductory Python course and has basic SQL knowledge but has not built production software or ML systems.",
+      "job_description": "HIRIS needs an AI Engineer for resume-to-job matching. Requirements: Python, ML model evaluation, LLM prompting, retrieval or semantic matching, responsible AI practices, and experience shipping production AI features in HR or recruiting workflows."
+    },
     "ground_truth": {
-      "expected_score_range": [60, 80],
-      "reasoning_keywords": ["Master's degree", "Python", "scikit-learn", "lacks NLP", "tabular data"]
-    }
-  },
-  {
-    "id": "cand_4",
-    "job_description": "Product Manager. Required: 4+ years of product management experience. Agile methodology. Strong communication and roadmap planning.",
-    "resume": "Bob Williams. Product Manager. 5 years experience managing B2B SaaS products. Certified Scrum Master (Agile). Developed multi-year roadmaps and communicated cross-functionally with engineering and marketing teams.",
-    "ground_truth": {
-      "expected_score_range": [90, 100],
-      "reasoning_keywords": ["5 years", "Agile", "Scrum Master", "roadmap", "communication", "excellent fit"]
-    }
-  },
-  {
-    "id": "cand_5",
-    "job_description": "Frontend Developer. Required: React, TypeScript, CSS Modules. Nice to have: Next.js.",
-    "resume": "Charlie Brown. Frontend Engineer. 3 years working with Vue.js and Nuxt.js. Proficient in Tailwind CSS and JavaScript. Some basic exposure to React.",
-    "ground_truth": {
-      "expected_score_range": [30, 55],
-      "reasoning_keywords": ["Vue.js", "missing TypeScript", "basic React", "mismatch"]
+      "suitability_score": 3,
+      "rationale": "The candidate has useful recruiting domain context but is not a strong fit for an AI engineering role. He lacks production software experience, ML evaluation, LLM prompting, semantic matching, and responsible AI implementation experience. Basic Python and SQL are insufficient for the role."
     }
   }
 ]

@@ -60,6 +60,7 @@ function buildApp() {
   app.use('/api',       require('../routes/core'))
   app.use('/api',       require('../routes/chro'))
   app.use('/api',       require('../routes/candidates'))
+  app.use('/api',       require('../routes/job_portal'))
   app.use('/api/ai',    require('../routes/ai'))
 
   app.get('/api/health', (_, res) => res.json({ ok: true }))

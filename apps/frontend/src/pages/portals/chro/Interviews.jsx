@@ -48,11 +48,11 @@ export default function CHROInterviews() {
     loadScheduled()
   }, [loadPipeline, loadScheduled])
 
-  const handleStartInterview = async (appId) => {
-    const type = 'behavioral'
-    const res = await apiFetch('/interviews/start', {
+  const handleStartInterview = async (interview) => {
+    const type = interview.interview_type || 'behavioral'
+    const res = await apiFetch(interview.id ? `/interviews/scheduled/${interview.id}/start` : '/interviews/start', {
       method: 'POST',
-      body: JSON.stringify({ application_id: appId, type })
+      body: interview.id ? undefined : JSON.stringify({ application_id: interview.application_id, type })
     })
     if (res.ok) {
       const { id } = await res.json()
@@ -214,9 +214,9 @@ export default function CHROInterviews() {
                           <button
                             className="btn btn-primary"
                             style={{ padding: '6px 12px', fontSize: 12 }}
-                            onClick={() => handleStartInterview(c.application_id)}
+                            onClick={() => handleStartInterview({ id: c.final_interview_id, application_id: c.application_id, interview_type: c.final_interview_type || 'behavioral' })}
                           >
-                            Start Final Interview
+                            Start Interview
                           </button>
                         ) : c.final_interview_status !== 'completed' ? (
                           <button
@@ -283,13 +283,26 @@ export default function CHROInterviews() {
                     </td>
                     <td><span className="badge badge-blue">{i.status}</span></td>
                     <td>
-                      <button
-                        onClick={() => handleStartInterview(i.application_id)}
-                        className="btn btn-primary"
-                        style={{ padding: '6px 12px', fontSize: 12 }}
-                      >
-                        Start Interview
-                      </button>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {i.can_start && (
+                          <button
+                            onClick={() => handleStartInterview(i)}
+                            className="btn btn-primary"
+                            style={{ padding: '6px 12px', fontSize: 12 }}
+                          >
+                            Start Interview
+                          </button>
+                        )}
+                        {i.can_view_profile && i.candidate_id && (
+                          <button
+                            onClick={() => navigate(`/chro/candidates/${i.candidate_id}`)}
+                            className="btn btn-outline"
+                            style={{ padding: '6px 12px', fontSize: 12 }}
+                          >
+                            View Profile
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

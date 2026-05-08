@@ -477,7 +477,6 @@ export default function CandidateProfile() {
           {/* Interview Summaries */}
           {interviews.map(int => {
             const humanEvals = int.evaluations?.filter(e => !e.is_ai) || []
-            const aiEvals = int.evaluations?.filter(e => e.is_ai) || []
             const analysis = int.ai_analysis || {}
             return (
             <SectionCard 
@@ -485,7 +484,7 @@ export default function CandidateProfile() {
               icon={int.type === 'technical' ? '💻' : '🤝'} 
               title={`${int.type === 'technical' ? 'Technical' : 'Behavioral'} Interview Summary`}
             >
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 16 }}>
+              <div style={{ marginBottom: 16 }}>
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8 }}>Interviewer Ratings</div>
                   {humanEvals.map(e => (
@@ -499,22 +498,6 @@ export default function CandidateProfile() {
                       </div>
                     </div>
                   ))}
-                </div>
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#7C3AED', textTransform: 'uppercase', marginBottom: 8 }}>AI Ratings</div>
-                  {aiEvals.length > 0 ? aiEvals.map(e => (
-                    <div key={e.trait_name} style={{ marginBottom: 10 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                        <span>{e.trait_name}</span>
-                        <span style={{ fontWeight: 700, color: '#7C3AED' }}>{e.score}/10</span>
-                      </div>
-                      <div style={{ height: 4, background: '#EDE9FE', borderRadius: 10, overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${e.score * 10}%`, background: '#7C3AED' }} />
-                      </div>
-                    </div>
-                  )) : (
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>AI analysis pending...</div>
-                  )}
                 </div>
               </div>
               <div style={{ background: 'var(--bg-hover)', padding: 16, borderRadius: 10, marginBottom: 16 }}>

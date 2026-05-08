@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "evaluate": "node evaluate.js",
+    "test": "node --check evaluate.js && node --check implementations.js && node --check utils.js"
   },
   "keywords": [],
   "author": "",

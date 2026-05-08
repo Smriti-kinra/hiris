@@ -1,83 +1,119 @@
-require('dotenv').config();
-const { generateContentWithRetry } = require('./utils');
+require('dotenv').config()
+const { generateContentWithRetry, parseJsonObject } = require('./utils')
 
-/**
- * 1. Single Prompt Baseline
- * Passes the JD and Resume in one go and asks for a score and summary.
- */
-async function scoreCandidateBaseline(jd, resume) {
-  const prompt = `
-You are an expert technical recruiter. You need to screen a candidate's resume against a job description.
-Provide a fit score from 0 to 100, and a brief 2-3 sentence summary explaining the reasoning.
-
-Job Description:
-${jd}
-
-Candidate Resume:
-${resume}
-
-Return the result STRICTLY as a JSON object with the exact keys "score" (number) and "summary" (string).
-`;
-
-  try {
-    const response = await generateContentWithRetry({
-      contents: prompt,
-      config: { responseMimeType: "application/json" }
-    });
-    
-    return JSON.parse(response.text);
-  } catch (error) {
-    console.error("Baseline API Error:", error);
-    return { score: 0, summary: "Error generating evaluation." };
+function normalizeMatchOutput(raw) {
+  const score = Number(raw.suitability_score)
+  return {
+    suitability_score: Number.isFinite(score) ? Math.max(0, Math.min(10, score)) : 0,
+    rationale: String(raw.rationale || '').trim(),
   }
 }
 
 /**
- * 2. Agentic Baseline
- * Multi-step process:
- * Step 1: Extract key requirements from the JD.
- * Step 2: Extract skills/experience from Resume.
- * Step 3: Compare and score.
+ * Single LLM Baseline:
+ * One prompt takes resume + JD and directly emits the final score/rationale.
  */
-async function scoreCandidateAgentic(jd, resume) {
-  try {
-    // Step 1: Analyze JD
-    const jdExtractionPrompt = `Extract the hard requirements, skills, and experience needed from this job description as a bulleted list:\n\n${jd}`;
-    const jdResp = await generateContentWithRetry({ contents: jdExtractionPrompt });
-    const jdRequirements = jdResp.text;
+async function scoreResumeJobMatchSingleLLM(resumeText, jobDescription) {
+  const prompt = `
+You are a senior HR expert evaluating resume-to-job fit.
 
-    // Step 2: Analyze Resume
-    const resumeExtractionPrompt = `Extract the skills, years of experience, and key accomplishments from this resume as a bulleted list:\n\n${resume}`;
-    const resumeResp = await generateContentWithRetry({ contents: resumeExtractionPrompt });
-    const candidateProfile = resumeResp.text;
+Return only JSON with:
+{
+  "suitability_score": number from 0 to 10,
+  "rationale": "2-4 sentences explaining matched strengths and gaps"
+}
 
-    // Step 3: Judge Fit
-    const finalPrompt = `
-You are an expert technical recruiter. Compare the Job Requirements with the Candidate Profile.
-Provide a fit score from 0 to 100, and a 2-3 sentence summary explaining the reasoning based strictly on the comparison.
+Job Description:
+${jobDescription}
 
-Job Requirements:
-${jdRequirements}
+Candidate Resume:
+${resumeText}
+`
 
-Candidate Profile:
-${candidateProfile}
+  const response = await generateContentWithRetry({
+    contents: prompt,
+    config: { responseMimeType: 'application/json' },
+  })
+  return normalizeMatchOutput(parseJsonObject(response.text))
+}
 
-Return the result STRICTLY as a JSON object with the exact keys "score" (number) and "summary" (string).
-`;
+/**
+ * Agentic Baseline:
+ * Step 1: Extract JD requirements.
+ * Step 2: Extract candidate evidence.
+ * Step 3: Compare matches and gaps.
+ * Step 4: Self-check the comparison before final scoring.
+ */
+async function scoreResumeJobMatchAgentic(resumeText, jobDescription) {
+  const jdRequirements = await generateContentWithRetry({
+    contents: `
+Extract the job requirements as JSON.
+Include hard skills, experience requirements, domain requirements, and nice-to-have signals.
 
-    const finalResp = await generateContentWithRetry({
-      contents: finalPrompt,
-      config: { responseMimeType: "application/json" }
-    });
+Job Description:
+${jobDescription}
+`,
+    config: { responseMimeType: 'application/json' },
+  })
 
-    return JSON.parse(finalResp.text);
-  } catch (error) {
-    console.error("Agentic API Error:", error);
-    return { score: 0, summary: "Error generating evaluation." };
-  }
+  const resumeEvidence = await generateContentWithRetry({
+    contents: `
+Extract candidate evidence as JSON.
+Include skills, years of experience, domain exposure, shipped work, leadership, and explicit gaps.
+
+Resume:
+${resumeText}
+`,
+    config: { responseMimeType: 'application/json' },
+  })
+
+  const comparison = await generateContentWithRetry({
+    contents: `
+Compare the JD requirements against candidate evidence.
+Return JSON with arrays: matched_requirements, partial_matches, missing_requirements, risk_flags.
+
+JD Requirements:
+${jdRequirements.text}
+
+Candidate Evidence:
+${resumeEvidence.text}
+`,
+    config: { responseMimeType: 'application/json' },
+  })
+
+  const finalResponse = await generateContentWithRetry({
+    contents: `
+You are the final scoring agent. Verify the comparison for unsupported claims, then score the candidate from 0 to 10.
+
+Use this scoring guide:
+- 9-10: Excellent fit with only minor gaps.
+- 7-8: Good fit with manageable gaps.
+- 4-6: Partial fit with meaningful gaps.
+- 0-3: Weak fit for core role requirements.
+
+Return only JSON with:
+{
+  "suitability_score": number from 0 to 10,
+  "rationale": "2-4 sentences grounded only in the resume and JD",
+  "self_check": "one sentence on whether the rationale avoids unsupported claims"
+}
+
+JD Requirements:
+${jdRequirements.text}
+
+Candidate Evidence:
+${resumeEvidence.text}
+
+Comparison:
+${comparison.text}
+`,
+    config: { responseMimeType: 'application/json' },
+  })
+
+  return normalizeMatchOutput(parseJsonObject(finalResponse.text))
 }
 
 module.exports = {
-  scoreCandidateBaseline,
-  scoreCandidateAgentic
-};
+  scoreResumeJobMatchSingleLLM,
+  scoreResumeJobMatchAgentic,
+}

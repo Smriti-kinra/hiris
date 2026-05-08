@@ -21,7 +21,7 @@ export function AuthProvider({ children }) {
 
     apiFetch('/auth/me')
       .then(safeJson)
-      .then(data => { if (data?.user) setUser(data.user) })
+      .then(data => { if (data && data.user) setUser(data.user) })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
@@ -31,7 +31,7 @@ export function AuthProvider({ children }) {
       method: 'POST',
       body:   JSON.stringify({ email, password }),
     })
-    const data = await safeJson(res)
+    const data = await safeJson(res) ?? {}
     if (!res.ok) throw new Error(data.error || 'Login failed')
     setUser(data.user)
     return data.user

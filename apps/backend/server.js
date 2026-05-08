@@ -10,8 +10,23 @@
 
 // ── MUST be the very first require ───────────────────────────────────────────
 const { Sentry, sentryErrorHandler } = require('./config/sentry')
+const path = require('path')
+const fs = require('fs')
+const { config: loadEnv } = require('dotenv')
 
-require('dotenv').config()
+const envCandidates = [
+  path.join(__dirname, '.env'),
+  path.join(__dirname, '..', '..', 'backend', '.env'),
+  path.join(process.cwd(), '.env'),
+]
+const envPath = envCandidates.find(p => fs.existsSync(p))
+if (envPath) {
+  loadEnv({ path: envPath })
+  console.log(`[env] Loaded environment from ${envPath}`)
+} else {
+  loadEnv()
+}
+
 require('express-async-errors')
 
 ;(function validateEnv() {

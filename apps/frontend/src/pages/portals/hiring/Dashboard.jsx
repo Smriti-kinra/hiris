@@ -10,6 +10,7 @@ function statusBadge(status) {
     'Sent for Approval':'badge-blue',
     'Approved':         'badge-green',
     'Rejected':         'badge-red',
+    'Posted':           'badge-green',
   }
   return `badge ${map[status] || 'badge-gray'}`
 }
