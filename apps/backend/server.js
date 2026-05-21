@@ -86,7 +86,7 @@ function isAllowedCorsOrigin(origin) {
 app.use(cors({
   origin: (origin, cb) => {
     if (isAllowedCorsOrigin(origin)) return cb(null, true)
-    const error = new Error('Not allowed by CORS'); error.status = 403; cb(error)
+    const error = new Error(`Not allowed by CORS: ${origin}`); error.status = 403; cb(error)
   },
   credentials: true,
 }))
