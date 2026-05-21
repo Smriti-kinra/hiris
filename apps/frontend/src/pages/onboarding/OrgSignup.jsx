@@ -4,6 +4,13 @@ import { apiFetch } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import hirisLogo from '../../assets/hiris-logo.svg'
 
+const DEMO_ACCOUNTS = [
+  { email: 'smriti.kinra@hiris.demo',        label: 'CHRO',            icon: 'shield_person' },
+  { email: 'sartajdeep.singh@hiris.demo',    label: 'Hiring Manager',  icon: 'manage_accounts' },
+  { email: 'gracy.tanna@hiris.demo',         label: 'Professor',       icon: 'school' },
+]
+const DEMO_PASSWORD = 'hiris2026'
+
 function slugify(value) {
   return String(value || '')
     .trim()
@@ -46,10 +53,30 @@ const STEPS = [
 /* ── Main Component ──────────────────────────────────────────────────────── */
 export default function OrgSignup() {
   const navigate = useNavigate()
-  const { setUser } = useAuth()
+  const { setUser, login } = useAuth()
   const [step, setStep] = useState(1)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [demoLoading, setDemoLoading] = useState(null)
+  const [demoError, setDemoError] = useState('')
+
+  async function handleDemoLogin(account) {
+    setDemoError('')
+    setDemoLoading(account.email)
+    try {
+      const user = await login(account.email, DEMO_PASSWORD)
+      const dest = user?.home_path || `/${user?.portal || 'dashboard'}`
+      if (dest.startsWith('http')) {
+        window.location.href = dest
+      } else {
+        navigate(dest, { replace: true })
+      }
+    } catch (err) {
+      setDemoError(err.message || 'Demo login failed. Please try again.')
+    } finally {
+      setDemoLoading(null)
+    }
+  }
   const [config, setConfig] = useState({ permission_groups: [], pipeline_stages: [], role_templates: [] })
 
   // Step 1
@@ -178,6 +205,49 @@ export default function OrgSignup() {
 
       <div style={{ paddingTop: 96, paddingBottom: 64 }}>
         <div style={{ maxWidth: 740, margin: '0 auto', padding: '0 24px' }}>
+
+          {/* ── Try Demo Banner ── */}
+          <div style={{ marginBottom: 32, padding: '20px 24px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, boxShadow: 'var(--shadow-sm)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--teal)' }}>bolt</span>
+              <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--navy)', letterSpacing: '0.01em' }}>Try HIRIS instantly — no setup needed</span>
+            </div>
+            <p style={{ fontSize: 12, color: 'var(--slate-500)', marginBottom: 16, lineHeight: 1.6 }}>
+              Explore any portal with a pre-configured demo account. Password: <code style={{ fontFamily: 'DM Mono, monospace', background: 'var(--slate-100)', padding: '1px 5px', borderRadius: 4 }}>{DEMO_PASSWORD}</code>
+            </p>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {DEMO_ACCOUNTS.map(account => (
+                <button
+                  key={account.email}
+                  onClick={() => handleDemoLogin(account)}
+                  disabled={!!demoLoading}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 7,
+                    padding: '9px 16px', borderRadius: 10,
+                    border: '1px solid var(--border)',
+                    background: demoLoading === account.email ? 'var(--teal-10)' : 'var(--slate-50)',
+                    color: demoLoading === account.email ? 'var(--teal)' : 'var(--navy)',
+                    fontSize: 13, fontWeight: 700, cursor: demoLoading ? 'wait' : 'pointer',
+                    transition: 'all 0.15s ease',
+                    opacity: demoLoading && demoLoading !== account.email ? 0.5 : 1,
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--teal)' }}>{account.icon}</span>
+                  {demoLoading === account.email ? 'Signing in...' : account.label}
+                </button>
+              ))}
+            </div>
+            {demoError && (
+              <div style={{ marginTop: 10, fontSize: 12, color: '#EF4444' }}>{demoError}</div>
+            )}
+          </div>
+
+          {/* ── Divider ── */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 32 }}>
+            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--slate-400)', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>Or set up your own organisation</span>
+            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+          </div>
 
           {/* Progress header */}
           <div style={{ marginBottom: 36 }}>
