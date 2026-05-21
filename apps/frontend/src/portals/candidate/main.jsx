@@ -6,6 +6,7 @@ import { AuthProvider } from '../../context/AuthContext'
 import { ToastProvider } from '../../context/ToastContext'
 import ErrorBoundary from '../../components/ErrorBoundary'
 import CandidateRoutes from './CandidateRoutes'
+import { Analytics } from '@vercel/analytics/react'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -17,6 +18,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           </BrowserRouter>
         </ToastProvider>
       </AuthProvider>
+      <Analytics />
     </ErrorBoundary>
   </React.StrictMode>
 )
