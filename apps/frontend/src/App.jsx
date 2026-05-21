@@ -1,4 +1,5 @@
 import { BrowserRouter } from 'react-router-dom'
+import { SpeedInsights } from '@vercel/speed-insights/react'
 import { AuthProvider } from './context/AuthContext'
 import { ToastProvider } from './context/ToastContext'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -16,6 +17,7 @@ export default function App() {
         </ToastProvider>
       </AuthProvider>
       <Analytics />
+      <SpeedInsights />
     </ErrorBoundary>
   )
 }

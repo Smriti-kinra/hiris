@@ -31,13 +31,7 @@ function getPostLoginDestination(user) {
   return user.home_path || '/dashboard'
 }
 
-const DEMO_ACCOUNTS = [
-  { email: 'smriti.kinra@hiris.demo', role: 'CHRO', label: 'Smriti Kinra' },
-  { email: 'sartajdeep.singh@hiris.demo', role: 'Hiring Manager', label: 'Sartajdeep Singh' },
-  { email: 'gracy.tanna@hiris.demo', role: 'Faculty Portal', label: 'Gracy Tanna' },
-]
 
-const DEMO_PASSWORD = 'hiris2026'
 
 
 
@@ -89,11 +83,6 @@ export default function LoginPage() {
     submitLogin(email, password)
   }
 
-  function quickLogin(account) {
-    setEmail(account.email)
-    setPassword(DEMO_PASSWORD)
-    submitLogin(account.email, DEMO_PASSWORD)
-  }
 
   if (loading || user) {
     return (
@@ -175,41 +164,6 @@ export default function LoginPage() {
                 Set up your organisation
               </Link>
             </div>
-          </div>
-
-          <div style={{ marginTop: 20, padding: '14px 16px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 12, color: 'var(--slate-500)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
-              <div style={{ fontWeight: 700, color: 'var(--slate-700)' }}>Demo accounts</div>
-              <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11 }}>pw: {DEMO_PASSWORD}</span>
-            </div>
-
-            {DEMO_ACCOUNTS.map(account => (
-              <div key={account.email} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '5px 0' }}>
-                <button
-                  type="button"
-                  onClick={() => setEmail(account.email)}
-                  style={{
-                    display: 'block', flex: 1, textAlign: 'left', background: 'none',
-                    border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--slate-500)',
-                  }}
-                >
-                  {account.label} - {account.role}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => quickLogin(account)}
-                  disabled={busy}
-                  style={{
-                    border: '1px solid var(--border)', background: 'var(--slate-50)',
-                    color: 'var(--teal)', fontSize: 11, fontWeight: 700,
-                    padding: '4px 8px', borderRadius: 6, cursor: busy ? 'not-allowed' : 'pointer',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  Quick Login
-                </button>
-              </div>
-            ))}
           </div>
         </div>
       </main>
