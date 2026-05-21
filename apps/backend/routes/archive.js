@@ -400,7 +400,7 @@ async function autoArchiveExpiredJobs(orgId) {
         AND hr.deadline < CURRENT_DATE
         AND eja.id IS NULL
         ${orgId ? 'AND j.org_id = ' + parseInt(orgId) : ''}
-      GROUP BY j.id, hr.jd_json, hr.requested_by
+      GROUP BY j.id, j.title, j.department, j.job_type, j.description, j.location, j.posted_at, j.org_id, hr.jd_json, hr.requested_by
     `)
 
     for (const job of expiredJobs) {
