@@ -63,6 +63,7 @@ async function login(req, res) {
   }
 
   const token = issueToken(user)
+  res.cookie('hiris_token', token, COOKIE_OPTS)
 
   res.json({ token, user: safeUser(user) })
 }
@@ -79,10 +80,13 @@ async function getMe(req, res) {
   )
 
   if (!rows[0]) return res.status(401).json({ error: 'User not found.' })
-  res.json({ user: safeUser(rows[0]) })
+  const token = issueToken(rows[0])
+  res.cookie('hiris_token', token, COOKIE_OPTS)
+  res.json({ token, user: safeUser(rows[0]) })
 }
 
 function logout(req, res) {
+  res.clearCookie('hiris_token', COOKIE_OPTS)
   res.json({ ok: true })
 }
 
@@ -199,6 +203,7 @@ async function registerOrg(req, res) {
     }
 
     const token = issueToken(createdAdmin)
+    res.cookie('hiris_token', token, COOKIE_OPTS)
 
     res.status(201).json({ token, user: safeUser(createdAdmin) })
   } catch (err) {

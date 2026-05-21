@@ -33,6 +33,16 @@ export default function TechnicalInterviewRoom() {
   const [candidateProfile, setCandidateProfile] = useState(null)
   const [previewOpen, setPreviewOpen] = useState(false)
 
+  // AI Questions (fetched from Gemini via backend)
+  const [aiQuestions, setAiQuestions] = useState([])
+  const [loadingQuestions, setLoadingQuestions] = useState(false)
+  const [askedQuestions, setAskedQuestions] = useState([])
+  const [customQuestions, setCustomQuestions] = useState([])
+  const [activeTab, setActiveTab] = useState('all')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [copyingText, setCopyingText] = useState(null)
+  const [customInput, setCustomInput] = useState('')
+
   // Audio recording
   const [isRecording, setIsRecording] = useState(false)
   const mediaRecorderRef = useRef(null)
@@ -59,8 +69,44 @@ export default function TechnicalInterviewRoom() {
       .catch(() => navigate('/'))
   }, [sessionId, navigate])
 
+  const fetchAIQuestions = async (candidateId) => {
+    setLoadingQuestions(true)
+    try {
+      const cached = await apiFetch(`/candidates/${candidateId}/questions`).then(r => r.json())
+      if (cached && cached.length > 0) {
+        setAiQuestions(cached.map(r => r.question))
+      } else {
+        setAiQuestions([])
+      }
+    } catch (err) {
+      console.error('Failed to fetch AI questions:', err)
+    }
+    setLoadingQuestions(false)
+  }
+
+  const appendToNotes = (qText) => {
+    setNotes(prev => {
+      const trimmed = prev.trim();
+      if (!trimmed) return qText;
+      return `${trimmed}\n\n- ${qText}`;
+    });
+    setNotesSaved(false);
+  }
+
+  // Filter questions based on active tab and search term
+  const allQuestions = [...aiQuestions, ...customQuestions]
+  const filteredQuestions = allQuestions
+    .filter(q => q.toLowerCase().includes(searchTerm.toLowerCase()))
+    .filter(q => {
+      if (activeTab === 'pending') return !askedQuestions.includes(q)
+      if (activeTab === 'asked') return askedQuestions.includes(q)
+      if (activeTab === 'custom') return customQuestions.includes(q)
+      return true
+    })
+
   useEffect(() => {
     if (session?.candidate_id) {
+      fetchAIQuestions(session.candidate_id)
       apiFetch(`/candidates/${session.candidate_id}`)
         .then(r => r.ok ? r.json() : null)
         .then(setCandidateProfile)
@@ -244,6 +290,178 @@ export default function TechnicalInterviewRoom() {
               )}
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 24, fontWeight: 800, fontFamily: 'monospace', color: 'var(--brand)' }}>{formatTime(timer)}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Redesigned AI Questions Panel */}
+          <div className="card ai-room-panel">
+            <div className="card-pad" style={{ borderBottom: '1px solid var(--ai-panel-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span className="badge-ai-sparkle">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                  AI Generated
+                </span>
+                <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--ai-panel-text)', letterSpacing: '-0.3px' }}>Contextual Questions</span>
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>Powered by Gemini</span>
+            </div>
+
+            <div className="card-pad" style={{ borderBottom: '1px solid var(--ai-panel-border)', display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 16 }}>
+              {/* Search Bar */}
+              <div className="ai-search-wrapper">
+                <svg className="ai-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input
+                  type="text"
+                  placeholder="Search generated questions..."
+                  className="hiris-input ai-search-input ai-input-glow"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                />
+              </div>
+
+              {/* Status Tabs */}
+              <div className="ai-tabs">
+                {[
+                  { id: 'all', label: 'All' },
+                  { id: 'pending', label: 'Pending' },
+                  { id: 'asked', label: 'Asked' },
+                  { id: 'custom', label: 'Custom' }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    className={`ai-tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+                    onClick={() => setActiveTab(tab.id)}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="card-pad ai-questions-scroll" style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 240, overflowY: 'auto' }}>
+              {loadingQuestions ? (
+                <div style={{ textAlign: 'center', padding: '24px 10px', color: 'var(--text-muted)', fontSize: 13, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                  <div className="spinner" style={{ width: 20, height: 20, borderWidth: 2 }} />
+                  <span>Generating candidate-specific questions...</span>
+                </div>
+              ) : filteredQuestions.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '24px 10px', color: 'var(--text-muted)', fontSize: 13 }}>
+                  No questions found for this filter.
+                </div>
+              ) : (
+                filteredQuestions.map((q, idx) => {
+                  const isAsked = askedQuestions.includes(q);
+                  const isCopying = copyingText === q;
+                  const isCustom = customQuestions.includes(q);
+
+                  return (
+                    <div
+                      key={idx}
+                      className={`ai-question-card ${isAsked ? 'asked' : ''}`}
+                    >
+                      <div className="ai-circle-index">
+                        {isCustom ? '✎' : idx + 1}
+                      </div>
+                      <div className="question-text" style={{ flex: 1 }}>
+                        {q}
+                      </div>
+                      <div className="ai-card-actions">
+                        {/* Toggle Asked Status */}
+                        <button
+                          type="button"
+                          className="ai-micro-btn"
+                          title={isAsked ? "Mark as Pending" : "Mark as Asked"}
+                          onClick={() => {
+                            if (isAsked) {
+                              setAskedQuestions(prev => prev.filter(item => item !== q));
+                            } else {
+                              setAskedQuestions(prev => [...prev, q]);
+                            }
+                          }}
+                        >
+                          {isAsked ? (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+                          ) : (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/></svg>
+                          )}
+                        </button>
+
+                        {/* Copy to Clipboard */}
+                        <button
+                          type="button"
+                          className="ai-micro-btn"
+                          title="Copy to clipboard"
+                          onClick={() => {
+                            navigator.clipboard.writeText(q);
+                            setCopyingText(q);
+                            setTimeout(() => setCopyingText(null), 2000);
+                          }}
+                        >
+                          {isCopying ? (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                          ) : (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                          )}
+                        </button>
+
+                        {/* Append to Notes */}
+                        <button
+                          type="button"
+                          className="ai-micro-btn"
+                          title="Append to Notes"
+                          onClick={() => appendToNotes(q)}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Custom follow-up input */}
+            <div className="card-pad" style={{ borderTop: '1px solid var(--ai-panel-border)', paddingTop: 14 }}>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="text"
+                  placeholder="Type a custom follow-up question..."
+                  value={customInput}
+                  onChange={e => setCustomInput(e.target.value)}
+                  className="hiris-input ai-input-glow"
+                  style={{ fontSize: 13, height: 38 }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && customInput.trim()) {
+                      e.preventDefault();
+                      setCustomQuestions(prev => [...prev, customInput.trim()]);
+                      setCustomInput('');
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{
+                    padding: '0 16px',
+                    height: 38,
+                    background: 'var(--ai-badge-text)',
+                    borderColor: 'var(--ai-badge-text)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 13
+                  }}
+                  onClick={() => {
+                    if (customInput.trim()) {
+                      setCustomQuestions(prev => [...prev, customInput.trim()]);
+                      setCustomInput('');
+                    }
+                  }}
+                >
+                  Add
+                </button>
               </div>
             </div>
           </div>
