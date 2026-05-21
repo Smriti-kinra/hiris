@@ -13,6 +13,7 @@ const { Sentry, sentryErrorHandler } = require('./config/sentry')
 const path = require('path')
 const fs = require('fs')
 const { config: loadEnv } = require('dotenv')
+const { migrate } = require('./migrate')
 
 const envCandidates = [
   path.join(__dirname, '.env'),
@@ -114,43 +115,56 @@ const swaggerSpec = swaggerJsdoc({
 })
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
 
-app.use('/api/auth',  require('./routes/auth'))
-app.use('/api/roles', require('./routes/roles'))
-app.use('/api',       require('./routes/core'))
-app.use('/api',       require('./routes/assistant'))
-app.use('/api',       require('./routes/chro'))
-app.use('/api',       require('./routes/pipeline'))
-app.use('/api',       require('./routes/candidates'))
-app.use('/api',       require('./routes/interviews'))
-app.use('/api',       require('./routes/job_portal'))
-app.use('/api',       require('./routes/archive'))
-app.use('/api/ai',    require('./routes/ai'))
+async function bootstrap() {
+  try {
+    console.log('[server] Running database migrations on startup...')
+    await migrate()
+    console.log('[server] Database migration complete.')
+  } catch (err) {
+    console.error('[server] Migration failed on startup:', err.message)
+    process.exit(1)
+  }
 
-// 404 for missing /api routes
-app.use('/api', (req, res) => {
-  res.status(404).json({ error: `API route not found: ${req.method} ${req.path}` })
-})
+  app.use('/api/auth',  require('./routes/auth'))
+  app.use('/api/roles', require('./routes/roles'))
+  app.use('/api',       require('./routes/core'))
+  app.use('/api',       require('./routes/assistant'))
+  app.use('/api',       require('./routes/chro'))
+  app.use('/api',       require('./routes/pipeline'))
+  app.use('/api',       require('./routes/candidates'))
+  app.use('/api',       require('./routes/interviews'))
+  app.use('/api',       require('./routes/job_portal'))
+  app.use('/api',       require('./routes/archive'))
+  app.use('/api/ai',    require('./routes/ai'))
 
-/** @swagger
- * /api/health:
- *   get:
- *     summary: Health check
- *     tags: [System]
- *     responses:
- *       200:
- *         description: Healthy
- */
-app.get('/api/health', (_, res) => res.json({ ok: true }))
+  // 404 for missing /api routes
+  app.use('/api', (req, res) => {
+    res.status(404).json({ error: `API route not found: ${req.method} ${req.path}` })
+  })
 
-// Sentry error handler BEFORE our own
-app.use(sentryErrorHandler)
+  /** @swagger
+   * /api/health:
+   *   get:
+   *     summary: Health check
+   *     tags: [System]
+   *     responses:
+   *       200:
+   *         description: Healthy
+   */
+  app.get('/api/health', (_, res) => res.json({ ok: true }))
 
-// Global error handler
-app.use((err, req, res, _next) => {
-  const isDev = process.env.NODE_ENV !== 'production'
-  logger.error(err.message, { stack: err.stack, path: req.path, method: req.method })
-  Sentry.captureException(err, { tags: { path: req.path, method: req.method } })
-  res.status(err.status || 500).json({ error: isDev ? err.message : 'An unexpected error occurred.' })
-})
+  // Sentry error handler BEFORE our own
+  app.use(sentryErrorHandler)
 
-app.listen(PORT, () => console.log(`HIRIS API → http://localhost:${PORT}`))
+  // Global error handler
+  app.use((err, req, res, _next) => {
+    const isDev = process.env.NODE_ENV !== 'production'
+    logger.error(err.message, { stack: err.stack, path: req.path, method: req.method })
+    Sentry.captureException(err, { tags: { path: req.path, method: req.method } })
+    res.status(err.status || 500).json({ error: isDev ? err.message : 'An unexpected error occurred.' })
+  })
+
+  app.listen(PORT, () => console.log(`HIRIS API → http://localhost:${PORT}`))
+}
+
+bootstrap()

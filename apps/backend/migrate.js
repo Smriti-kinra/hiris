@@ -59,7 +59,11 @@ async function migrate() {
   console.log('\n[migrate] All migrations complete.\n')
 }
 
-migrate().catch(err => {
-  console.error('[migrate] FAILED:', err.message)
-  process.exit(1)
-})
+if (require.main === module) {
+  migrate().catch(err => {
+    console.error('[migrate] FAILED:', err.message)
+    process.exit(1)
+  })
+}
+
+module.exports = { migrate }
