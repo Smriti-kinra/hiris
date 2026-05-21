@@ -26,19 +26,21 @@ export function AuthProvider({ children }) {
     localStorage.setItem('hiris_theme', theme)
   }, [theme])
 
-  /* ── Restore session from sessionStorage token on mount ── */
+  /* ── Restore session on mount ── */
   useEffect(() => {
     // Clear any stale Phase-2 localStorage session
     localStorage.removeItem('hiris_user')
 
-    if (!getSessionToken()) {
-      setLoading(false)
-      return
-    }
-
     apiFetch('/auth/me')
       .then(safeJson)
-      .then(data => { if (data && data.user) setUser(data.user) })
+      .then(data => {
+        if (data && data.user) {
+          setUser(data.user)
+          if (data.token) {
+            saveSessionToken(data.token)
+          }
+        }
+      })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])

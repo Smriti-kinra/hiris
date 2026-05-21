@@ -77,8 +77,6 @@ echo -e "  ${MAGENTA}CHRO / Admin${NC}     →  http://localhost:${CHRO_PORT}"
 echo -e "  ${WHITE}Recruiter${NC}        →  http://localhost:${RECRUITER_PORT}"
 echo -e "  ${RED}Candidate${NC}        →  http://localhost:${CANDIDATE_PORT}"
 echo ""
-echo -e "${CYAN}[STEP 4/4]${NC} Launching via concurrently... (Ctrl+C to stop all)\n"
-
 # Export ALLOWED_ORIGINS so backend picks it up
 export ALLOWED_ORIGINS
 
@@ -94,4 +92,30 @@ npx concurrently \
   "npx vite --config vite.config.hiring.js    --mode hiring" \
   "npx vite --config vite.config.chro.js      --mode chro" \
   "npx vite --config vite.config.recruiter.js --mode recruiter" \
-  "npx vite --config vite.config.candidate.js --mode candidate"
+  "npx vite --config vite.config.candidate.js --mode candidate" &
+CONC_PID=$!
+
+echo -e "\n${YELLOW}[LAUNCH] Waiting 6 seconds for Vite dev servers to stabilize...${NC}"
+sleep 6
+
+echo -e "\n${GREEN}[LAUNCH] Launching Incognito Chrome Windows...${NC}"
+# Open each portal in its own isolated incognito Chrome window
+# --new-window forces a brand new window (not a tab)
+# --incognito ensures session isolation for each role
+open -na "Google Chrome" --args --incognito --new-window "http://localhost:${LANDING_PORT}/"
+sleep 0.5
+open -na "Google Chrome" --args --incognito --new-window "http://localhost:${FACULTY_PORT}/"
+sleep 0.5
+open -na "Google Chrome" --args --incognito --new-window "http://localhost:${CHRO_PORT}/"
+# Uncomment these when recruiter/candidate/hiring portals are needed:
+# sleep 0.5
+# open -na "Google Chrome" --args --incognito --new-window "http://localhost:${HIRING_PORT}/"
+# sleep 0.5
+# open -na "Google Chrome" --args --incognito --new-window "http://localhost:${RECRUITER_PORT}/"
+# sleep 0.5
+# open -na "Google Chrome" --args --incognito --new-window "http://localhost:${CANDIDATE_PORT}/"
+
+echo -e "\n${GREEN}[OK] Isolated Chrome incognito windows launched successfully.${NC}\n"
+
+# Wait for the background concurrently process so Ctrl+C propagates beautifully
+wait $CONC_PID
