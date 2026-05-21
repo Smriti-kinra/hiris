@@ -130,7 +130,7 @@ export default function PricingPage() {
                   </div>
 
                   <Link
-                    to="/login"
+                    to="/get-started"
                     style={{
                       display: 'block', textAlign: 'center', padding: '12px', borderRadius: 8,
                       background: plan.highlight ? 'var(--teal)' : 'transparent',
@@ -180,7 +180,7 @@ export default function PricingPage() {
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 16, marginBottom: 36, maxWidth: 480, margin: '0 auto' }}>
             Talk to our team about the right plan for your organisation.
           </p>
-          <Link to="/login" className="btn-white" style={{ fontSize: 15 }}>Get Started Free</Link>
+          <Link to="/get-started" className="btn-white" style={{ fontSize: 15 }}>Get Started Free</Link>
         </div>
       </section>
 

@@ -133,7 +133,7 @@ export default function HomePage() {
           </p>
 
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 56 }}>
-            <Link to="/login" className="btn-white" style={{ fontSize: 15, padding: '14px 32px' }}>Get Started</Link>
+            <Link to="/get-started" className="btn-white" style={{ fontSize: 15, padding: '14px 32px' }}>Get Started</Link>
             <Link to="/pricing" className="btn-secondary" style={{ fontSize: 15, padding: '14px 32px', color: 'rgba(255,255,255,0.75)', borderColor: 'rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.06)' }}
               onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = 'white' }}
               onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'rgba(255,255,255,0.75)' }}
@@ -303,7 +303,7 @@ export default function HomePage() {
             Set up your organisation in minutes. No credit card required for the first 30 days.
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-            <Link to="/login" className="btn-white" style={{ fontSize: 15 }}>Get Started</Link>
+            <Link to="/get-started" className="btn-white" style={{ fontSize: 15 }}>Get Started</Link>
             <Link to="/pricing" className="btn-secondary" style={{ color: 'rgba(255,255,255,0.8)', borderColor: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.1)', fontSize: 15 }}
               onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.2)'; e.currentTarget.style.color = 'white' }}
               onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = 'rgba(255,255,255,0.8)' }}

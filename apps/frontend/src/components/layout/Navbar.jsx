@@ -37,7 +37,7 @@ export default function Navbar({ hideNavItems = false }) {
             ) : (
               <>
                 <Link to="/login" className="btn btn-ghost">Login</Link>
-                <Link to="/login" className="btn btn-primary">Get Started</Link>
+                <Link to="/get-started" className="btn btn-primary">Get Started</Link>
               </>
             )
           )}

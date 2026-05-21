@@ -6,6 +6,7 @@ import ProtectedRoute from '../components/ProtectedRoute'
 const LoginPage = lazy(() => import('../pages/auth/LoginPage'))
 const HomePage = lazy(() => import('../pages/landing/HomePage'))
 const PricingPage = lazy(() => import('../pages/landing/PricingPage'))
+const GetStartedPage = lazy(() => import('../pages/landing/GetStartedPage'))
 const OrgSignup = lazy(() => import('../pages/onboarding/OrgSignup'))
 const RoleManagement = lazy(() => import('../pages/settings/roles/RoleManagement'))
 
@@ -77,6 +78,7 @@ export default function AppRoutes() {
         <Route path="/" element={<HomePage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/get-started" element={<GetStartedPage />} />
         <Route path="/onboarding" element={<OrgSignup />} />
         <Route path="/signup" element={<OrgSignup />} />
         <Route path="/jobs/apply/:token" element={<CandidateJobPortal />} />
