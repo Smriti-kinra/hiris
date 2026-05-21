@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "echo 'No build step for evaluation package'",
     "evaluate": "node evaluate.js",
     "test": "node --check evaluate.js && node --check implementations.js && node --check utils.js"
   },
