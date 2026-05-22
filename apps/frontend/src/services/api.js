@@ -52,6 +52,12 @@ export async function apiFetch(path, options = {}) {
  */
 export async function safeJson(res) {
   try {
+    // If the response is HTML, it means the API base URL is misconfigured or pointing to Vercel's SPA catch-all
+    const contentType = res.headers && typeof res.headers.get === 'function' ? res.headers.get('content-type') : '';
+    if (contentType && contentType.includes('text/html')) {
+      console.warn('[API ERROR] Server returned HTML instead of JSON. This usually indicates that the VITE_API_BASE_URL environment variable is missing on Vercel, or the server is down.');
+      return { error: 'API connection failed. Please ensure the backend is running and VITE_API_BASE_URL is configured on Vercel.' }
+    }
     const text = await res.text()
     if (!text) return null
     return JSON.parse(text)
