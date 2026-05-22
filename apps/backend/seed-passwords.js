@@ -4,7 +4,9 @@
  * Sets bcrypt-hashed password for the three demo portal users.
  * Demo password for all accounts: hiris2026
  *
- * Usage: node seed-passwords.js
+ * Usage (CLI):  node seed-passwords.js
+ * Usage (code): const { seedDemoPasswords } = require('./seed-passwords')
+ *               await seedDemoPasswords()
  */
 const fs   = require('fs')
 const path = require('path')
@@ -28,29 +30,42 @@ const DEMO_EMAILS   = [
   'gracy.tanna@hiris.demo',
 ]
 
-async function seedPasswords() {
+/**
+ * Seeds the demo account passwords in the database.
+ * Safe to call multiple times — it always sets/refreshes the hash.
+ * Only updates users that already exist in the DB (idempotent).
+ */
+async function seedDemoPasswords() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL })
-  console.log('\n[seed-passwords] Hashing demo password…')
-  const hash = await bcrypt.hash(DEMO_PASSWORD, 10)
-  console.log('[seed-passwords] Hash generated.')
+  try {
+    console.log('[seed-passwords] Hashing demo password…')
+    const hash = await bcrypt.hash(DEMO_PASSWORD, 10)
+    console.log('[seed-passwords] Hash generated.')
 
-  for (const email of DEMO_EMAILS) {
-    const { rowCount } = await pool.query(
-      'UPDATE users SET password_hash = $1 WHERE email = $2',
-      [hash, email]
-    )
-    if (rowCount === 0) {
-      console.warn(`  ⚠ No user found for ${email}`)
-    } else {
-      console.log(`  ✓ Password set for ${email}`)
+    for (const email of DEMO_EMAILS) {
+      const { rowCount } = await pool.query(
+        'UPDATE users SET password_hash = $1 WHERE LOWER(email) = LOWER($2)',
+        [hash, email]
+      )
+      if (rowCount === 0) {
+        console.warn(`  ⚠ No user found for ${email} — skipping`)
+      } else {
+        console.log(`  ✓ Password set for ${email}`)
+      }
     }
-  }
 
-  await pool.end()
-  console.log('\n[seed-passwords] Done. Demo password: hiris2026\n')
+    console.log('[seed-passwords] Done. Demo password: hiris2026')
+  } finally {
+    await pool.end()
+  }
 }
 
-seedPasswords().catch(err => {
-  console.error('[seed-passwords] FAILED:', err.message)
-  process.exit(1)
-})
+// Allow running directly: node seed-passwords.js
+if (require.main === module) {
+  seedDemoPasswords().catch(err => {
+    console.error('[seed-passwords] FAILED:', err.message)
+    process.exit(1)
+  })
+}
+
+module.exports = { seedDemoPasswords }

@@ -13,7 +13,8 @@ const { Sentry, sentryErrorHandler } = require('./config/sentry')
 const path = require('path')
 const fs = require('fs')
 const { config: loadEnv } = require('dotenv')
-const { migrate } = require('./migrate')
+const { migrate }  = require('./migrate')
+const { seedDemoPasswords } = require('./seed-passwords')
 
 const envCandidates = [
   path.join(__dirname, '.env'),
@@ -123,6 +124,15 @@ async function bootstrap() {
   } catch (err) {
     console.error('[server] Migration failed on startup:', err.message)
     process.exit(1)
+  }
+
+  try {
+    console.log('[server] Seeding demo account passwords...')
+    await seedDemoPasswords()
+    console.log('[server] Demo accounts ready.')
+  } catch (err) {
+    // Non-fatal: log but don't crash the server
+    console.warn('[server] Demo password seeding skipped:', err.message)
   }
 
   app.use('/api/auth',  require('./routes/auth'))
