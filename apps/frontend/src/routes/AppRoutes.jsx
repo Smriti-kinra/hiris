@@ -3,10 +3,11 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import ProtectedRoute from '../components/ProtectedRoute'
 
-const LoginPage = lazy(() => import('../pages/auth/LoginPage'))
-const HomePage = lazy(() => import('../pages/landing/HomePage'))
-const PricingPage = lazy(() => import('../pages/landing/PricingPage'))
-const GetStartedPage = lazy(() => import('../pages/landing/GetStartedPage'))
+import LoginPage from '../pages/auth/LoginPage'
+import HomePage from '../pages/landing/HomePage'
+import PricingPage from '../pages/landing/PricingPage'
+import GetStartedPage from '../pages/landing/GetStartedPage'
+
 const OrgSignup = lazy(() => import('../pages/onboarding/OrgSignup'))
 const RoleManagement = lazy(() => import('../pages/settings/roles/RoleManagement'))
 
