@@ -42,9 +42,10 @@ router.get('/jobs/public/:token', async (req, res) => {
   const jobId = linkRes.rows[0].job_id
   const jobRes = await query(`
     SELECT j.id, j.title, j.department, j.job_type, j.description as summary, 
-           j.location, j.posted_at, hr.jd_json 
+           j.location, j.posted_at, hr.jd_json, o.name as org_name
     FROM jobs j
     LEFT JOIN headcount_requests hr ON hr.job_id = j.id
+    LEFT JOIN orgs o ON o.id = j.org_id
     WHERE j.id = $1 AND j.status != 'closed'
   `, [jobId])
   
@@ -65,6 +66,14 @@ router.get('/jobs/public/:token', async (req, res) => {
     // Extract custom questions
     job.questions = Array.isArray(job.jd_json.questions) ? job.jd_json.questions : []
   }
+  
+  // Dynamically generate pre-screening questions based on the organization name
+  const orgName = job.org_name || 'the organization'
+  job.chat_questions = [
+    `Why do you want to apply to ${orgName}?`,
+    `How would you contribute to the ${orgName} community?`,
+    `What differentiates you from other candidates?`
+  ]
   
   res.json(job)
 })

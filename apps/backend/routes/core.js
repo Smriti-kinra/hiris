@@ -155,10 +155,14 @@ router.post('/hiring-requests', requireAuth, requirePermission('can_request_jobs
   const { title, department, job_type, headcount, urgency, deadline, start_date, notes } = req.body
   if (!title || !department) return res.status(400).json({ error: 'Title and department are required.' })
 
+  // Dynamically fetch organization name for location
+  const orgRes = await query(`SELECT name FROM orgs WHERE id = $1`, [req.currentUser.orgId])
+  const orgLocation = orgRes.rows[0]?.name || 'Plaksha University'
+
   const { rows } = await query(`
     WITH new_job AS (
       INSERT INTO jobs (org_id, title, department, job_type, status, manager_id, location)
-      VALUES ($10, $1, $2, $3, 'pending', $4, 'Plaksha University') RETURNING id
+      VALUES ($10, $1, $2, $3, 'pending', $4, $11) RETURNING id
     )
     INSERT INTO headcount_requests (org_id, job_id, requested_by, headcount, urgency, deadline, start_date, notes, status)
     SELECT $10, id, $4, $5, $6, $7::date, $8::date, $9, 'pending' FROM new_job
@@ -167,7 +171,7 @@ router.post('/hiring-requests', requireAuth, requirePermission('can_request_jobs
       headcount AS positions, deadline, start_date, 'Pending Review' AS status, submitted_at,
       (SELECT name FROM users WHERE id=$4) AS requested_by`,
     [title, department, job_type||'Full-time', req.currentUser.userId,
-     headcount||1, urgency||'medium', deadline||null, start_date||null, notes||null, req.currentUser.orgId])
+     headcount||1, urgency||'medium', deadline||null, start_date||null, notes||null, req.currentUser.orgId, orgLocation])
   res.status(201).json(rows[0])
 })
 

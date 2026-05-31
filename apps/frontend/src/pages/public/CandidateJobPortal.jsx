@@ -4,9 +4,9 @@ import { apiFetch, safeJson } from '../../services/api'
 import Navbar from '../../components/layout/Navbar'
 import Footer from '../../components/layout/Footer'
 
-const CHAT_QUESTIONS = [
-  "Why do you want to apply to Plaksha?",
-  "How would you contribute to the Plaksha community?",
+const DEFAULT_CHAT_QUESTIONS = [
+  "Why do you want to apply to this organization?",
+  "How would you contribute to our community?",
   "What differentiates you from other candidates?"
 ]
 
@@ -36,6 +36,8 @@ export default function CandidateJobPortal() {
   const [chatAnswers, setChatAnswers] = useState([])
   const [currentChatInput, setCurrentChatInput] = useState('')
 
+  const chatQuestions = job?.chat_questions || DEFAULT_CHAT_QUESTIONS
+
   const questions = useMemo(() => Array.isArray(job?.questions) ? job.questions : [], [job])
 
   useEffect(() => {
@@ -58,7 +60,7 @@ export default function CandidateJobPortal() {
   const handleChatSubmit = (e) => {
     if (e) e.preventDefault()
     if (!currentChatInput.trim()) return
-    const newAnswers = [...chatAnswers, { question: CHAT_QUESTIONS[chatStep], answer: currentChatInput }]
+    const newAnswers = [...chatAnswers, { question: chatQuestions[chatStep], answer: currentChatInput }]
     setChatAnswers(newAnswers)
     setCurrentChatInput('')
     setChatStep(prev => prev + 1)
@@ -74,7 +76,7 @@ export default function CandidateJobPortal() {
     if (reqs.cv && !cvFile) return setError('CV is required.')
     if (reqs.linkedin && !form.linkedin.trim()) return setError('LinkedIn URL is required.')
     if (reqs.github && !form.github.trim()) return setError('GitHub URL is required.')
-    if (chatStep < CHAT_QUESTIONS.length) {
+    if (chatStep < chatQuestions.length) {
       setError('Please complete the AI chat questions before submitting.')
       return
     }
@@ -94,7 +96,7 @@ export default function CandidateJobPortal() {
     formData.append('form_answers', JSON.stringify(questions.map((q, i) => ({ question: q.text, answer: answers[q.id || i] || '' }))))
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/jobs/public/${token}/apply`, {
+      const response = await apiFetch(`/jobs/public/${token}/apply`, {
         method: 'POST',
         body: formData,
       })
@@ -356,14 +358,14 @@ export default function CandidateJobPortal() {
                         </div>
                       ))}
                       
-                      {chatStep < CHAT_QUESTIONS.length && (
+                      {chatStep < chatQuestions.length && (
                         <div style={{ alignSelf: 'flex-start', background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '12px 16px', borderRadius: '16px 16px 16px 4px', border: '1px solid var(--border)', fontSize: 13, maxWidth: '85%', boxShadow: '0 2px 4px rgba(0,0,0,0.03)', animation: 'fadeIn 0.3s ease' }}>
-                          {CHAT_QUESTIONS[chatStep]}
+                          {chatQuestions[chatStep]}
                         </div>
                       )}
                     </div>
 
-                    {chatStep < CHAT_QUESTIONS.length ? (
+                    {chatStep < chatQuestions.length ? (
                       <div style={{ display: 'flex', gap: 10 }}>
                         <input
                           className="hiris-input"
@@ -389,7 +391,7 @@ export default function CandidateJobPortal() {
                   <button 
                     type="submit" 
                     className="btn btn-primary" 
-                    disabled={submitting || chatStep < CHAT_QUESTIONS.length} 
+                    disabled={submitting || chatStep < chatQuestions.length} 
                     style={{ justifyContent: 'center', padding: '14px', fontSize: 15, width: '100%' }}
                   >
                     {submitting ? 'Submitting Application...' : 'Submit Application'}
