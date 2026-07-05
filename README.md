@@ -16,7 +16,6 @@
 
 HIRIS is a secure, full-stack, enterprise-grade hiring platform designed for institutional recruitment and organizational governance. It simplifies the end-to-end recruitment pipeline by providing dedicated portals for **Hiring Managers**, **Faculty members**, and the **CHRO** to manage headcount requests, design job descriptions, screen candidates, conduct interviews, and evaluate alignment with organizational policies.
 
-> [!NOTE]
 > **Developed by Smriti Kinra & Sartajdeep Singh**
 
 ---
