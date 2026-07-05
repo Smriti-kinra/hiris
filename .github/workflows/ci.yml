@@ -10,6 +10,21 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: hiris_db
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
     - uses: actions/checkout@v4
 
@@ -23,6 +38,12 @@ jobs:
     - name: Install repository dependencies (workspaces)
       run: npm ci --include=dev
 
+    - name: Run Database Migrations
+      working-directory: ./apps/backend
+      run: node migrate.js
+      env:
+        DATABASE_URL: postgres://postgres@localhost:5432/hiris_db
+
     - name: Build Frontend
       working-directory: ./apps/frontend
       run: npm run build
@@ -30,6 +51,9 @@ jobs:
     - name: Backend Unit Tests
       working-directory: ./apps/backend
       run: npm test
+      env:
+        DATABASE_URL: postgres://postgres@localhost:5432/hiris_db
+        JWT_SECRET: test-secret-32-chars-min-length!!
 
     - name: Backend Smoke Test
       working-directory: ./apps/backend
