@@ -13,19 +13,14 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Use Node.js 20
+    - name: Use Node.js 24
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: '24'
         cache: 'npm'
         cache-dependency-path: '**/package-lock.json'
 
-    - name: Install Backend Dependencies
-      working-directory: ./apps/backend
-      run: npm ci --include=dev
-
-    - name: Install Frontend Dependencies
-      working-directory: ./apps/frontend
+    - name: Install repository dependencies (workspaces)
       run: npm ci --include=dev
 
     - name: Build Frontend
