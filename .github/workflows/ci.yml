@@ -22,11 +22,11 @@ jobs:
 
     - name: Install Backend Dependencies
       working-directory: ./apps/backend
-      run: npm ci
+      run: npm ci --include=dev
 
     - name: Install Frontend Dependencies
       working-directory: ./apps/frontend
-      run: npm ci
+      run: npm ci --include=dev
 
     - name: Build Frontend
       working-directory: ./apps/frontend
@@ -37,7 +37,7 @@ jobs:
       run: npm test
 
     - name: Backend Smoke Test
-      working-directory: ./backend
+      working-directory: ./apps/backend
       run: |
         # Start server in background with dummy env vars
         DATABASE_URL=postgres://dummy JWT_SECRET=test-secret-key PORT=3001 node server.js > /tmp/server.log 2>&1 &

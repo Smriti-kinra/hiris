@@ -2,7 +2,6 @@
   <img src="docs/screenshots/hiris-logo.svg" alt="HIRIS Logo" width="220" />
 </p>
 
-<h1 align="center">HIRIS</h1>
 <p align="center"><strong>Hiring Intelligence & Recruitment Information System</strong></p>
 
 <p align="center">
@@ -16,11 +15,7 @@
 
 HIRIS is a secure, full-stack, enterprise-grade hiring platform designed for institutional recruitment and organizational governance. It simplifies the end-to-end recruitment pipeline by providing dedicated portals for Hiring Managers, Faculty members, and the CHRO to manage headcount requests, design job descriptions, screen candidates, conduct interviews, and evaluate alignment with organizational policies.
 
-<<<<<<< HEAD
-> [!NOTE]
-=======
->>>>>>> d5043acd23eb48cc5a91d71ec12b5b15782fa194
-> **Developed by Smriti Kinra & Sartajdeep Singh**
+> Developed by Smriti Kinra & Sartajdeep Singh
 
 ---
 
@@ -43,17 +38,17 @@ HIRIS leverages advanced generative AI models and transcription workflows at key
 
 ```mermaid
 graph TD
-    A[Candidate Application] -->|Upload PDF Resume| B(Background Processing Engine)
+    A[Candidate<br/>Application] -->|Upload PDF Resume| B(Background<br/>Processing Engine)
     A -->|Submit AI Chat Answers| B
-    B -->|Calls Gemini API| C[Generate Candidate Summary]
-    B -->|Tailored Question Generator| D[Pre-Generate 10 Interview Questions]
+    B -->|Calls Gemini API| C[Generate<br/>Candidate Summary]
+    B -->|Tailored Question Generator| D[Pre-Generate<br/>10 Questions]
     
     C -->|Persists Data| E[(PostgreSQL)]
     D -->|Persists Data| E
     
-    F[Live Structured Interview] -->|Microphone Capture| G(Groq Whisper API)
-    G -->|High-Fidelity Transcript| H(Gemini Trait Assessor)
-    H -->|Scores 1-10 on Trait Scale| I[Evaluation Panel & Analytics]
+    F[Live Structured<br/>Interview] -->|Microphone Capture| G(Groq Whisper API)
+    G -->|High-Fidelity Transcript| H(Gemini Trait<br/>Assessor)
+    H -->|Scores 1-10 on Trait Scale| I[Evaluation Panel<br/>& Analytics]
     H -->|Recommends Hire/No Hire| I
     I -->|Audited Decisions| E
 ```
