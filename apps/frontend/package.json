@@ -32,6 +32,9 @@
     "concurrently": "^9.2.1",
     "vite": "^5.2.0"
   },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "4.60.3"
+  },
   "description": "",
   "main": "vite.config.js",
   "keywords": [],

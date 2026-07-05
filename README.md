@@ -14,14 +14,14 @@
 
 ---
 
-HIRIS is a secure, full-stack, enterprise-grade hiring platform designed for institutional recruitment and organizational governance. It simplifies the end-to-end recruitment pipeline by providing dedicated portals for **Hiring Managers**, **Faculty members**, and the **CHRO** to manage headcount requests, design job descriptions, screen candidates, conduct interviews, and evaluate alignment with organizational policies.
+HIRIS is a secure, full-stack, enterprise-grade hiring platform designed for institutional recruitment and organizational governance. It simplifies the end-to-end recruitment pipeline by providing dedicated portals for Hiring Managers, Faculty members, and the CHRO to manage headcount requests, design job descriptions, screen candidates, conduct interviews, and evaluate alignment with organizational policies.
 
 > [!NOTE]
-> **Developed with ❤️ by Smriti Kinra & Sartajdeep Singh**
+> **Developed by Smriti Kinra & Sartajdeep Singh**
 
 ---
 
-## 🛠️ Technology Stack
+## Technical Stack
 
 | Layer | Technologies | Key Capabilities |
 | :--- | :--- | :--- |
@@ -34,7 +34,7 @@ HIRIS is a secure, full-stack, enterprise-grade hiring platform designed for ins
 
 ---
 
-## 🧠 AI-Powered Recruitment Pipelines
+## AI-Powered Recruitment Pipelines
 
 HIRIS leverages advanced generative AI models and transcription workflows at key stages of the recruitment funnel:
 
@@ -55,18 +55,18 @@ graph TD
     I -->|Audited Decisions| E
 ```
 
-### 1. Application Submission $\rightarrow$ Resume Parsing & Summary
+### 1. Application Submission and Resume Parsing
 *   **Resume Parsing:** Automatically extracts and segments data from uploaded resume/CV PDFs.
-*   **Gemini Summarization:** Synthesizes candidate experience and answers from the dynamic application chatbot, computing an **institutional alignment score**.
+*   **Gemini Summarization:** Synthesizes candidate experience and answers from the dynamic application chatbot, computing an institutional alignment score.
 *   **Tailored Question Generator:** Dynamically creates 10 candidate-specific behavioral questions aligned with institutional policies.
 
-### 2. Audio Interview $\rightarrow$ Speech-to-Text $\rightarrow$ Gemini Evaluation
-*   **Whisper Transcription:** Audio recorded directly inside the structured interview room is transcribed in real-time using **Groq's Whisper API (`whisper-large-v3-turbo`)**.
+### 2. Audio Interview and Gemini Evaluation
+*   **Whisper Transcription:** Audio recorded directly inside the structured interview room is transcribed in real-time using Groq's Whisper API (`whisper-large-v3-turbo`).
 *   **Trait Assessment:** Gemini analyzes the transcription text against the candidate profile and generates trait-level scores (1-10) for Communication, Leadership, Emotional Intelligence, and alignment.
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```bash
 hiris/
@@ -83,7 +83,7 @@ hiris/
 
 ---
 
-## ⚡ Prerequisites
+## Prerequisites
 
 *   **Node.js:** v20+
 *   **PostgreSQL:** v15+ (if running locally without Docker)
@@ -91,7 +91,7 @@ hiris/
 
 ---
 
-## 🚀 Local Development Setup
+## Local Development Setup
 
 To boot up the application locally, you can utilize the workspace package commands or the automated startup script:
 
@@ -126,12 +126,12 @@ Return to the project root and start both servers concurrently:
 ```bash
 bash scripts/start_all.sh
 ```
-*   **Frontend UI:** Available at [http://localhost:5176](http://localhost:5176) (or [http://localhost:5173](http://localhost:5173))
-*   **Backend Server:** Serving API routes at [http://localhost:3001](http://localhost:3001)
+*   **Frontend UI:** Available at http://localhost:5176 (or http://localhost:5173)
+*   **Backend Server:** Serving API routes at http://localhost:3001
 
 ---
 
-## 👤 Seeding & Demo Accounts
+## Seeding and Demo Accounts
 
 The local database will be seeded with mock accounts. You can log in to experience the role-based views (CHRO, Hiring Manager, or Faculty).
 
@@ -145,7 +145,7 @@ The local database will be seeded with mock accounts. You can log in to experien
 
 ---
 
-## 🐳 Production Deployment (Docker Compose)
+## Production Deployment (Docker Compose)
 
 The application is container-ready and configured for production environments via Docker Compose:
 
@@ -160,9 +160,21 @@ The application is container-ready and configured for production environments vi
 
 ---
 
-## 🛡️ CI/CD Pipeline
+## CI/CD Pipeline
 
 A GitHub Actions workflow is fully configured in `.github/workflows/ci.yml`. On every push or pull request to the `main` branch, the pipeline automatically:
 1. Installs backend and frontend dependencies.
 2. Compiles a production-ready build of the React frontend.
 3. Spawns the Express backend to run an automated smoke test, verifying that the `/api/health` endpoint serves a `200 OK` status.
+
+---
+
+## Contributing
+
+We welcome community contributions. Please refer to [CONTRIBUTING.md](file:///Users/smriti/Documents/GitHub/hiris/CONTRIBUTING.md) for guidelines on code styling, issue reporting, and pull request procedures.
+
+---
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](file:///Users/smriti/Documents/GitHub/hiris/LICENSE) file for details.
